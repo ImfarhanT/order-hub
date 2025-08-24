@@ -1,0 +1,24 @@
+# Order Hub Environment Variables for Render
+# Copy these EXACTLY as shown below to Render environment variables
+
+# Database Connection (Supabase)
+ConnectionStrings__Default=postgresql://postgres:aCS9j0qkKkp5vNm5@db.saglfbcqdncdoxljocna.supabase.co:5432/postgres?sslmode=require
+
+# Security - Encryption key for API secrets
+SITE_SECRETS_KEY=Ihlz4UD0w3soTVf2rB66lzecabXk/sMOcP2Ik3VcPF0=
+
+# Admin Authentication
+ADMIN_EMAIL=admin@orderhub.com
+ADMIN_PASSWORD=OrderHub2024!Secure
+
+# Application Settings
+ASPNETCORE_ENVIRONMENT=Production
+ASPNETCORE_URLS=http://+:8080
+
+# Logging Configuration
+Serilog__MinimumLevel__Default=Information
+Serilog__MinimumLevel__Microsoft=Warning
+Serilog__MinimumLevel__Microsoft.EntityFrameworkCore.Database.Command=Warning
+
+# CORS - Update with your actual domains
+AllowedOrigins=https://yourdomain.com,https://www.yourdomain.com
