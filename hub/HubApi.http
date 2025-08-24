@@ -1,0 +1,6 @@
+@HubApi_HostAddress = http://localhost:5069
+
+GET {{HubApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

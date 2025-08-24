@@ -1,0 +1,21 @@
+# Copy and paste these environment variables to Render:
+
+ConnectionStrings__Default=postgresql://postgres:aCS9j0qkKkp5vNm5@db.saglfbcqdncdoxljocna.supabase.co:5432/postgres?sslmode=require
+
+SITE_SECRETS_KEY=Ihlz4UD0w3soTVf2rB66lzecabXk/sMOcP2Ik3VcPF0=
+
+ADMIN_EMAIL=admin@orderhub.com
+
+ADMIN_PASSWORD=OrderHub2024!Secure
+
+ASPNETCORE_ENVIRONMENT=Production
+
+ASPNETCORE_URLS=http://+:8080
+
+Serilog__MinimumLevel__Default=Information
+
+Serilog__MinimumLevel__Microsoft=Warning
+
+Serilog__MinimumLevel__Microsoft.EntityFrameworkCore.Database.Command=Warning
+
+AllowedOrigins=https://yourdomain.com,https://www.yourdomain.com

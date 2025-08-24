@@ -1,0 +1,152 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore hub/HubApi.csproj
+    
+    - name: Build
+      run: dotnet build hub/HubApi.csproj --no-restore --configuration Release
+    
+    - name: Test
+      run: dotnet test hub/HubApi.csproj --no-build --verbosity normal --configuration Release
+    
+    - name: Publish
+      run: dotnet publish hub/HubApi.csproj -c Release -o hub/publish
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: hub-build
+        path: hub/publish/
+        retention-days: 7
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run CodeQL Analysis
+      uses: github/codeql-action/init@v3
+      with:
+        languages: csharp
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan]
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: hub-build
+        path: hub/publish/
+    
+    - name: Deploy to Staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Add your staging deployment commands here
+        # Example: Deploy to staging server or platform
+    
+    - name: Run Integration Tests
+      run: |
+        echo "Running integration tests against staging..."
+        # Add integration test commands here
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: hub-build
+        path: hub/publish/
+    
+    - name: Deploy to Production
+      run: |
+        echo "Deploying to production environment..."
+        # Add your production deployment commands here
+        # Example: Deploy to production server or platform
+    
+    - name: Health Check
+      run: |
+        echo "Performing post-deployment health check..."
+        # Add health check commands here
+    
+    - name: Notify Deployment
+      run: |
+        echo "Production deployment completed successfully!"
+        # Add notification commands here (Slack, email, etc.)
+
+  plugin-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, xml, curl
+    
+    - name: Install PHP Dependencies
+      run: |
+        cd wc-plugin
+        composer install --no-dev --optimize-autoloader
+    
+    - name: Run PHP Linting
+      run: |
+        cd wc-plugin
+        find . -name "*.php" -exec php -l {} \;
+    
+    - name: Run PHP Security Check
+      run: |
+        cd wc-plugin
+        composer require --dev enlightn/security-checker
+        ./vendor/bin/security-checker security:check composer.lock
