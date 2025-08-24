@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using HubApi.Data;
 using HubApi.Services;
-using HubApi.Middleware;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,18 +30,6 @@ builder.Services.AddScoped<ICryptoService, CryptoService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add authentication
-builder.Services.AddAuthentication("Cookies")
-    .AddCookie("Cookies", options =>
-    {
-        options.LoginPath = "/admin/login";
-        options.LogoutPath = "/admin/logout";
-        options.AccessDeniedPath = "/admin/access-denied";
-    });
-
-// Add authorization
-builder.Services.AddAuthorization();
-
 // Add CORS
 builder.Services.AddCors(options =>
 {
@@ -57,29 +44,17 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-// Enable Swagger in production for now (can be disabled later)
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
-
 app.UseCors("AllowAll");
-
-// Add HMAC authentication middleware
-app.UseMiddleware<HmacAuthenticationMiddleware>();
 
 app.UseRouting();
 
-app.UseAuthentication();
-app.UseAuthorization();
-
 app.MapControllers();
+
+// Simple health check endpoint
+app.MapGet("/", () => "Order Hub API is running!");
 
 // Ensure database is created and migrated (non-blocking)
 _ = Task.Run(async () =>
