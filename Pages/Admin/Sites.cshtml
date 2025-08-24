@@ -77,7 +77,7 @@
                                 <td>
                                     <div class="btn-group" role="group">
                                         <button class="btn btn-sm btn-outline-primary" 
-                                                onclick="viewSiteDetails('@site.Id', '@site.Name', '@site.BaseUrl', '@site.ApiKey', @site.IsActive.ToString().ToLower())" 
+                                                onclick="viewSiteDetails('@site.Id')" 
                                                 title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -152,32 +152,49 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Basic Information</h6>
-                        <table class="table table-sm">
-                            <tr><td><strong>Name:</strong></td><td id="detailName"></td></tr>
-                            <tr><td><strong>Base URL:</strong></td><td id="detailUrl"></td></tr>
-                            <tr><td><strong>Status:</strong></td><td id="detailStatus"></td></tr>
-                            <tr><td><strong>Created:</strong></td><td id="detailCreated"></td></tr>
-                        </table>
+                <div id="siteDetailsLoading" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
-                    <div class="col-md-6">
-                        <h6>API Configuration</h6>
-                        <div class="mb-3">
-                            <label class="form-label">API Key</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="detailApiKey" readonly>
-                                <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(document.getElementById('detailApiKey').value)">
-                                    <i class="bi bi-clipboard"></i>
-                                </button>
-                            </div>
+                    <p class="mt-3">Loading site details...</p>
+                </div>
+                <div id="siteDetailsContent" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Basic Information</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Name:</strong></td><td id="detailName"></td></tr>
+                                <tr><td><strong>Base URL:</strong></td><td id="detailUrl"></td></tr>
+                                <tr><td><strong>Status:</strong></td><td id="detailStatus"></td></tr>
+                                <tr><td><strong>Created:</strong></td><td id="detailCreated"></td></tr>
+                            </table>
                         </div>
-                        <div class="alert alert-info">
-                            <small>
-                                <i class="bi bi-info-circle me-2"></i>
-                                Use this API Key and Secret in your WooCommerce plugin to sync orders.
-                            </small>
+                        <div class="col-md-6">
+                            <h6>API Configuration</h6>
+                            <div class="mb-3">
+                                <label class="form-label">API Key</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="detailApiKey" readonly>
+                                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(document.getElementById('detailApiKey').value)">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">API Secret</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="detailApiSecret" readonly>
+                                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(document.getElementById('detailApiSecret').value)">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="alert alert-info">
+                                <small>
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Use this API Key and Secret in your WooCommerce plugin to sync orders.
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -234,15 +251,35 @@
             });
         }
 
-        function viewSiteDetails(siteId, siteName, baseUrl, apiKey, isActive) {
-            document.getElementById('detailName').textContent = siteName;
-            document.getElementById('detailUrl').textContent = baseUrl;
-            document.getElementById('detailStatus').textContent = isActive === 'true' ? 'Active' : 'Inactive';
-            document.getElementById('detailCreated').textContent = new Date().toLocaleDateString();
-            document.getElementById('detailApiKey').value = apiKey;
+        function viewSiteDetails(siteId) {
+            // Show loading state
+            document.getElementById('siteDetailsLoading').style.display = 'block';
+            document.getElementById('siteDetailsContent').style.display = 'none';
             
-            const modal = new bootstrap.Modal(document.getElementById('siteDetailsModal'));
-            modal.show();
+            // Fetch site details via AJAX
+            fetch(`?handler=SiteDetails&siteId=${siteId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Populate the modal with site details
+                    document.getElementById('detailName').textContent = data.name;
+                    document.getElementById('detailUrl').textContent = data.baseUrl;
+                    document.getElementById('detailStatus').textContent = data.isActive ? 'Active' : 'Inactive';
+                    document.getElementById('detailCreated').textContent = new Date(data.createdAt).toLocaleDateString();
+                    document.getElementById('detailApiKey').value = data.apiKey;
+                    document.getElementById('detailApiSecret').value = data.apiSecret;
+                    
+                    // Hide loading, show content
+                    document.getElementById('siteDetailsLoading').style.display = 'none';
+                    document.getElementById('siteDetailsContent').style.display = 'block';
+                    
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('siteDetailsModal'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error fetching site details:', error);
+                    alert('Error loading site details. Please try again.');
+                });
         }
 
         function toggleSiteStatus(siteId, currentStatus) {

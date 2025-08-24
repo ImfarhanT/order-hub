@@ -122,6 +122,40 @@ public class SitesModel : PageModel
         return Page();
     }
 
+    // API endpoint to get site details including decrypted secret
+    public async Task<IActionResult> OnGetSiteDetailsAsync(Guid siteId)
+    {
+        try
+        {
+            var site = await _context.Sites.FindAsync(siteId);
+            if (site == null)
+            {
+                return NotFound();
+            }
+
+            // Decrypt the API secret
+            var apiSecret = _cryptoService.Decrypt(site.ApiSecretEnc);
+
+            var siteDetails = new
+            {
+                site.Id,
+                site.Name,
+                site.BaseUrl,
+                site.ApiKey,
+                ApiSecret = apiSecret,
+                site.IsActive,
+                site.CreatedAt,
+                site.UpdatedAt
+            };
+
+            return new JsonResult(siteDetails);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     private async Task<IActionResult> HandleDeleteSite(Guid siteId)
     {
         try
