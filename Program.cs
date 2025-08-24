@@ -80,12 +80,21 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapRazorPages();
 
-// Ensure database is created and migrated
-using (var scope = app.Services.CreateScope())
+// Ensure database is created and migrated (non-blocking)
+_ = Task.Run(async () =>
 {
-    var context = scope.ServiceProvider.GetRequiredService<OrderHubDbContext>();
-    await context.Database.EnsureCreatedAsync();
-}
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<OrderHubDbContext>();
+        await context.Database.EnsureCreatedAsync();
+        Log.Information("Database connection established successfully");
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Database connection failed during startup, will retry later");
+    }
+});
 
 try
 {
