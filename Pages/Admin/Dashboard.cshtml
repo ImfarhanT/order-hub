@@ -1,0 +1,165 @@
+@page
+@model HubApi.Pages.Admin.DashboardModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Sites
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalSites</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-globe fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total Orders
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalOrders</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cart fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Total Revenue
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">$@Model.TotalRevenue.ToString("N2")</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-currency-dollar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Active Partners
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.ActivePartners</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Orders</h6>
+            </div>
+            <div class="card-body">
+                @if (Model.RecentOrders.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Site</th>
+                                    <th>Customer</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var order in Model.RecentOrders)
+                                {
+                                    <tr>
+                                        <td>@order.WcOrderId</td>
+                                        <td>@order.SiteName</td>
+                                        <td>@order.CustomerName</td>
+                                        <td>$@order.OrderTotal.ToString("N2")</td>
+                                        <td>
+                                            <span class="badge bg-@(order.Status == "completed" ? "success" : "warning")">
+                                                @order.Status
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No orders found.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Site Overview</h6>
+            </div>
+            <div class="card-body">
+                @if (Model.SiteStats.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Site</th>
+                                    <th>Orders</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var stat in Model.SiteStats)
+                                {
+                                    <tr>
+                                        <td>@stat.SiteName</td>
+                                        <td>@stat.OrderCount</td>
+                                        <td>$@stat.TotalRevenue.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No site statistics available.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

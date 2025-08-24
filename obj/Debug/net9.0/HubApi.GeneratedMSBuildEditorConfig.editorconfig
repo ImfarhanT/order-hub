@@ -27,3 +27,47 @@ build_property.MSBuildProjectDirectory = /Users/farhan/Desktop/order-hub
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 9.0
 build_property.EnableCodeStyleSeverity = 
+
+[/Users/farhan/Desktop/order-hub/Pages/Admin/Dashboard.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vRGFzaGJvYXJkLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/farhan/Desktop/order-hub/Pages/Admin/Gateways.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vR2F0ZXdheXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/farhan/Desktop/order-hub/Pages/Admin/Login.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vTG9naW4uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/farhan/Desktop/order-hub/Pages/Admin/Logout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vTG9nb3V0LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/farhan/Desktop/order-hub/Pages/Admin/Orders.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vT3JkZXJzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/farhan/Desktop/order-hub/Pages/Admin/Partners.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vUGFydG5lcnMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/farhan/Desktop/order-hub/Pages/Admin/Reports.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vUmVwb3J0cy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/farhan/Desktop/order-hub/Pages/Admin/Sites.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vU2l0ZXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/farhan/Desktop/order-hub/Pages/Shared/_Layout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvU2hhcmVkL19MYXlvdXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/farhan/Desktop/order-hub/Pages/_ViewImports.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvX1ZpZXdJbXBvcnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/farhan/Desktop/order-hub/Pages/_ViewStart.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvX1ZpZXdTdGFydC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 

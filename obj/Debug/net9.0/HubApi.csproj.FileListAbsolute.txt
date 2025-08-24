@@ -136,3 +136,5 @@
 /Users/farhan/Desktop/order-hub/obj/Debug/net9.0/HubApi.pdb
 /Users/farhan/Desktop/order-hub/obj/Debug/net9.0/HubApi.genruntimeconfig.cache
 /Users/farhan/Desktop/order-hub/obj/Debug/net9.0/ref/HubApi.dll
+/Users/farhan/Desktop/order-hub/obj/Debug/net9.0/HubApi.RazorAssemblyInfo.cache
+/Users/farhan/Desktop/order-hub/obj/Debug/net9.0/HubApi.RazorAssemblyInfo.cs

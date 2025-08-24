@@ -17,6 +17,7 @@ builder.Host.UseSerilog();
 
 // Add services to the container
 builder.Services.AddControllers();
+builder.Services.AddRazorPages();
 
 // Add Entity Framework
 builder.Services.AddDbContext<OrderHubDbContext>(options =>
@@ -29,6 +30,18 @@ builder.Services.AddScoped<ICryptoService, CryptoService>();
 // Add Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Add authentication
+builder.Services.AddAuthentication("Cookies")
+    .AddCookie("Cookies", options =>
+    {
+        options.LoginPath = "/admin/login";
+        options.LogoutPath = "/admin/logout";
+        options.AccessDeniedPath = "/admin/access-denied";
+    });
+
+// Add authorization
+builder.Services.AddAuthorization();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -44,14 +57,28 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+// Enable Swagger in production for now
 app.UseSwagger();
 app.UseSwaggerUI();
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
 
 app.UseCors("AllowAll");
 
 app.UseRouting();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
+app.MapRazorPages();
 
 // Simple health check endpoint
 app.MapGet("/", () => "Order Hub API is running!");
