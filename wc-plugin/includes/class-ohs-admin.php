@@ -83,6 +83,14 @@ class OHS_Admin
             'ohs_settings',
             'ohs_general_section'
         );
+
+        add_settings_field(
+            'ohs_test_connection',
+            __('Test Connection', 'order-hub-sync'),
+            array($this, 'test_connection_section'),
+            'ohs_settings',
+            'ohs_general_section'
+        );
     }
 
     /**
@@ -178,15 +186,59 @@ class OHS_Admin
                 $(target).show();
             });
 
-            // Backfill functionality
-            $('#start_backfill').click(function() {
-                var count = $('#backfill_count').val();
+            // Test connection functionality
+            $('#test-connection').on('click', function() {
                 var button = $(this);
+                var status = $('#test-status');
+                var hubUrl = $('input[name="ohs_hub_url"]').val();
+                var apiKey = $('input[name="ohs_api_key"]').val();
+                var apiSecret = $('input[name="ohs_api_secret"]').val();
+
+                if (!hubUrl || !apiKey || !apiSecret) {
+                    status.html('<span style="color: red;">Please fill in all fields first</span>');
+                    return;
+                }
+
+                button.prop('disabled', true).text('Testing...');
+                status.html('<span style="color: blue;">Testing connection...</span>');
+
+                // Test the connection by trying to access the sites endpoint
+                $.ajax({
+                    url: hubUrl + '/api/sites',
+                    type: 'GET',
+                    timeout: 10000,
+                    success: function(response) {
+                        status.html('<span style="color: green;">✓ Connection successful! API is responding.</span>');
+                    },
+                    error: function(xhr, status, error) {
+                        if (xhr.status === 401) {
+                            status.html('<span style="color: orange;">⚠ Connection works but authentication failed. Check your API key/secret.</span>');
+                        } else if (xhr.status === 404) {
+                            status.html('<span style="color: red;">✗ API endpoint not found. Check your Hub URL.</span>');
+                        } else {
+                            status.html('<span style="color: red;">✗ Connection failed: ' + error + '</span>');
+                        }
+                    },
+                    complete: function() {
+                        button.prop('disabled', false).text('Test Connection');
+                    }
+                });
+            });
+
+            // Backfill orders functionality
+            $('#start_backfill').on('click', function() {
+                var button = $(this);
+                var count = $('#backfill_count').val();
                 var status = $('#backfill_status');
-                
-                button.prop('disabled', true);
-                status.html('<span style="color: blue;">Processing...</span>');
-                
+
+                if (!count || count < 1) {
+                    alert('Please enter a valid number of orders');
+                    return;
+                }
+
+                button.prop('disabled', true).text('Processing...');
+                status.html('Processing orders...');
+
                 $.ajax({
                     url: ohs_ajax.ajax_url,
                     type: 'POST',
@@ -234,8 +286,8 @@ class OHS_Admin
     public function hub_url_callback()
     {
         $value = get_option('ohs_hub_url');
-        echo '<input type="url" name="ohs_hub_url" value="' . esc_attr($value) . '" class="regular-text" />';
-        echo '<p class="description">' . __('The base URL of your Order Hub (e.g., https://your-hub.onrender.com)', 'order-hub-sync') . '</p>';
+        echo '<input type="url" name="ohs_hub_url" value="' . esc_attr($value) . '" class="regular-text" placeholder="https://your-hub.up.railway.app" />';
+        echo '<p class="description">' . __('The base URL of your Order Hub (e.g., https://order-hub-production.up.railway.app)', 'order-hub-sync') . '</p>';
     }
 
     /**
@@ -244,8 +296,8 @@ class OHS_Admin
     public function api_key_callback()
     {
         $value = get_option('ohs_api_key');
-        echo '<input type="text" name="ohs_api_key" value="' . esc_attr($value) . '" class="regular-text" />';
-        echo '<p class="description">' . __('Your site API key from Order Hub', 'order-hub-sync') . '</p>';
+        echo '<input type="text" name="ohs_api_key" value="' . esc_attr($value) . '" class="regular-text" placeholder="Enter your API key" />';
+        echo '<p class="description">' . __('Your site API key from Order Hub dashboard', 'order-hub-sync') . '</p>';
     }
 
     /**
@@ -254,8 +306,8 @@ class OHS_Admin
     public function api_secret_callback()
     {
         $value = get_option('ohs_api_secret');
-        echo '<input type="password" name="ohs_api_secret" value="' . esc_attr($value) . '" class="regular-text" />';
-        echo '<p class="description">' . __('Your site API secret from Order Hub', 'order-hub-sync') . '</p>';
+        echo '<input type="password" name="ohs_api_secret" value="' . esc_attr($value) . '" class="regular-text" placeholder="Enter your API secret" />';
+        echo '<p class="description">' . __('Your site API secret from Order Hub dashboard', 'order-hub-sync') . '</p>';
     }
 
     /**
@@ -266,6 +318,16 @@ class OHS_Admin
         $value = get_option('ohs_debug_log');
         echo '<input type="checkbox" name="ohs_debug_log" value="1" ' . checked(1, $value, false) . ' />';
         echo '<span class="description">' . __('Log detailed information to WordPress debug log', 'order-hub-sync') . '</span>';
+    }
+
+    /**
+     * Test connection section
+     */
+    public function test_connection_section()
+    {
+        echo '<p>' . __('Test your connection to Order Hub before saving settings.', 'order-hub-sync') . '</p>';
+        echo '<button type="button" id="test-connection" class="button button-secondary">' . __('Test Connection', 'order-hub-sync') . '</button>';
+        echo '<span id="test-status" style="margin-left: 10px;"></span>';
     }
 
     /**

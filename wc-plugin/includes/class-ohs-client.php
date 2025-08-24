@@ -59,7 +59,7 @@ class OHS_Client
         }
 
         $payload = $this->build_order_payload($order);
-        $endpoint = $this->hub_url . '/api/v1/orders/sync';
+        $endpoint = $this->hub_url . '/api/orders';
 
         $result = $this->make_request($endpoint, $payload);
         
@@ -105,7 +105,7 @@ class OHS_Client
         $signature_base = $this->api_key . '|' . $update_data['timestamp'] . '|' . $update_data['nonce'] . '|' . $update_data['wc_order_id'] . '|0';
         $update_data['signature'] = $this->compute_signature($signature_base, $this->api_secret);
 
-        $endpoint = $this->hub_url . '/api/v1/shipping/update';
+        $endpoint = $this->hub_url . '/api/shipping';
 
         $result = $this->make_request($endpoint, $update_data);
         
@@ -253,8 +253,7 @@ class OHS_Client
     private function store_failed_order($order_id, $payload)
     {
         $failed_orders = get_option('ohs_failed_orders', array());
-        $failed_orders[] = array(
-            'order_id' => $order_id,
+        $failed_orders[$order_id] = array(
             'payload' => $payload,
             'timestamp' => time(),
             'retry_count' => 0
@@ -273,19 +272,19 @@ class OHS_Client
         }
 
         $remaining = array();
-        foreach ($failed_orders as $failed) {
+        foreach ($failed_orders as $order_id => $failed) {
             if ($failed['retry_count'] >= 3) {
-                $this->log('Order ' . $failed['order_id'] . ' failed permanently after 3 retries');
+                $this->log('Order ' . $order_id . ' failed permanently after 3 retries');
                 continue;
             }
 
             $failed['retry_count']++;
-            $endpoint = $this->hub_url . '/api/v1/orders/sync';
+            $endpoint = $this->hub_url . '/api/orders'; // Changed endpoint for retry
 
             if ($this->make_request($endpoint, $failed['payload'])) {
-                $this->log('Failed order ' . $failed['order_id'] . ' processed successfully on retry ' . $failed['retry_count']);
+                $this->log('Failed order ' . $order_id . ' processed successfully on retry ' . $failed['retry_count']);
             } else {
-                $remaining[] = $failed;
+                $remaining[$order_id] = $failed; // Keep original key
             }
         }
 
@@ -293,11 +292,11 @@ class OHS_Client
     }
 
     /**
-     * Log message
+     * Log message if debug is enabled
      */
     private function log($message)
     {
-        if (get_option('ohs_debug_log')) {
+        if (get_option('ohs_debug_log', false)) {
             error_log('Order Hub Sync: ' . $message);
         }
     }
