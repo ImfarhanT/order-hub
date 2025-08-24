@@ -75,16 +75,23 @@
                                 </td>
                                 <td>@site.CreatedAt.ToString("MMM dd, yyyy")</td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-primary" 
-                                            onclick="viewSiteDetails('@site.Id')" 
-                                            title="View Details">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-warning" 
-                                            onclick="toggleSiteStatus('@site.Id', @site.IsActive.ToString().ToLower())" 
-                                            title="@(site.IsActive ? "Deactivate" : "Activate")">
-                                        <i class="bi bi-@(site.IsActive ? "pause" : "play")"></i>
-                                    </button>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="viewSiteDetails('@site.Id', '@site.Name', '@site.BaseUrl', '@site.ApiKey', @site.IsActive.ToString().ToLower())" 
+                                                title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-@(site.IsActive ? "warning" : "success")" 
+                                                onclick="toggleSiteStatus('@site.Id', @site.IsActive.ToString().ToLower())" 
+                                                title="@(site.IsActive ? "Pause" : "Activate")">
+                                            <i class="bi bi-@(site.IsActive ? "pause" : "play")"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                onclick="deleteSite('@site.Id', '@site.Name')" 
+                                                title="Delete Site">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -136,6 +143,78 @@
     </div>
 </div>
 
+<!-- Site Details Modal -->
+<div class="modal fade" id="siteDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Site Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>Name:</strong></td><td id="detailName"></td></tr>
+                            <tr><td><strong>Base URL:</strong></td><td id="detailUrl"></td></tr>
+                            <tr><td><strong>Status:</strong></td><td id="detailStatus"></td></tr>
+                            <tr><td><strong>Created:</strong></td><td id="detailCreated"></td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>API Configuration</h6>
+                        <div class="mb-3">
+                            <label class="form-label">API Key</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="detailApiKey" readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(document.getElementById('detailApiKey').value)">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="alert alert-info">
+                            <small>
+                                <i class="bi bi-info-circle me-2"></i>
+                                Use this API Key and Secret in your WooCommerce plugin to sync orders.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteSiteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">Delete Site</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the site "<strong id="deleteSiteName"></strong>"?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. All orders and data associated with this site will be permanently removed.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" style="display: inline;">
+                    <input type="hidden" id="deleteSiteId" name="DeleteSiteId" />
+                    <button type="submit" class="btn btn-danger">Delete Site</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         function copyToClipboard(text) {
@@ -155,14 +234,37 @@
             });
         }
 
-        function viewSiteDetails(siteId) {
-            // TODO: Implement site details view
-            alert('Site details view coming soon!');
+        function viewSiteDetails(siteId, siteName, baseUrl, apiKey, isActive) {
+            document.getElementById('detailName').textContent = siteName;
+            document.getElementById('detailUrl').textContent = baseUrl;
+            document.getElementById('detailStatus').textContent = isActive === 'true' ? 'Active' : 'Inactive';
+            document.getElementById('detailCreated').textContent = new Date().toLocaleDateString();
+            document.getElementById('detailApiKey').value = apiKey;
+            
+            const modal = new bootstrap.Modal(document.getElementById('siteDetailsModal'));
+            modal.show();
         }
 
         function toggleSiteStatus(siteId, currentStatus) {
-            // TODO: Implement site status toggle
-            alert('Site status toggle coming soon!');
+            if (confirm('Are you sure you want to ' + (currentStatus === 'true' ? 'pause' : 'activate') + ' this site?')) {
+                // Create a form and submit it
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="ToggleSiteId" value="${siteId}" />
+                    <input type="hidden" name="CurrentStatus" value="${currentStatus}" />
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function deleteSite(siteId, siteName) {
+            document.getElementById('deleteSiteName').textContent = siteName;
+            document.getElementById('deleteSiteId').value = siteId;
+            
+            const modal = new bootstrap.Modal(document.getElementById('deleteSiteModal'));
+            modal.show();
         }
     </script>
 }

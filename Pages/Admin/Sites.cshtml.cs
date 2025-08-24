@@ -30,6 +30,15 @@ public class SitesModel : PageModel
     [BindProperty]
     public string BaseUrl { get; set; } = string.Empty;
 
+    [BindProperty]
+    public Guid? DeleteSiteId { get; set; }
+
+    [BindProperty]
+    public Guid? ToggleSiteId { get; set; }
+
+    [BindProperty]
+    public bool? CurrentStatus { get; set; }
+
     public async Task OnGetAsync()
     {
         Sites = await _context.Sites
@@ -39,6 +48,19 @@ public class SitesModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        // Handle site deletion
+        if (DeleteSiteId.HasValue)
+        {
+            return await HandleDeleteSite(DeleteSiteId.Value);
+        }
+
+        // Handle site status toggle
+        if (ToggleSiteId.HasValue && CurrentStatus.HasValue)
+        {
+            return await HandleToggleSiteStatus(ToggleSiteId.Value, CurrentStatus.Value);
+        }
+
+        // Handle site creation
         if (string.IsNullOrEmpty(SiteName) || string.IsNullOrEmpty(BaseUrl))
         {
             ErrorMessage = "Please provide both site name and base URL.";
@@ -97,6 +119,63 @@ public class SitesModel : PageModel
             ErrorMessage = $"Error creating site: {ex.Message}";
         }
 
+        return Page();
+    }
+
+    private async Task<IActionResult> HandleDeleteSite(Guid siteId)
+    {
+        try
+        {
+            var site = await _context.Sites.FindAsync(siteId);
+            if (site == null)
+            {
+                ErrorMessage = "Site not found.";
+                return Page();
+            }
+
+            // Delete associated orders and data
+            var orders = await _context.Orders.Where(o => o.SiteId == siteId).ToListAsync();
+            _context.Orders.RemoveRange(orders);
+
+            // Delete the site
+            _context.Sites.Remove(site);
+            await _context.SaveChangesAsync();
+
+            SuccessMessage = $"Site '{site.Name}' has been deleted successfully.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error deleting site: {ex.Message}";
+        }
+
+        await OnGetAsync();
+        return Page();
+    }
+
+    private async Task<IActionResult> HandleToggleSiteStatus(Guid siteId, bool currentStatus)
+    {
+        try
+        {
+            var site = await _context.Sites.FindAsync(siteId);
+            if (site == null)
+            {
+                ErrorMessage = "Site not found.";
+                return Page();
+            }
+
+            site.IsActive = !currentStatus;
+            site.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            var action = currentStatus ? "paused" : "activated";
+            SuccessMessage = $"Site '{site.Name}' has been {action} successfully.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error updating site status: {ex.Message}";
+        }
+
+        await OnGetAsync();
         return Page();
     }
 
