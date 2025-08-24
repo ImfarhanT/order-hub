@@ -18,7 +18,6 @@ builder.Host.UseSerilog();
 
 // Add services to the container
 builder.Services.AddControllers();
-builder.Services.AddRazorPages();
 
 // Add Entity Framework
 builder.Services.AddDbContext<OrderHubDbContext>(options =>
@@ -64,8 +63,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Enable Swagger in production for now (can be disabled later)
+app.UseSwagger();
+app.UseSwaggerUI();
+
 app.UseHttpsRedirection();
-app.UseStaticFiles();
 
 app.UseCors("AllowAll");
 
@@ -78,7 +80,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapRazorPages();
 
 // Ensure database is created and migrated (non-blocking)
 _ = Task.Run(async () =>
