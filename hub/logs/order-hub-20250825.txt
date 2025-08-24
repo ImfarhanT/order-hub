@@ -1,0 +1,166 @@
+2025-08-25 00:33:37.282 +05:00 [INF] User profile is available. Using '/Users/farhan/.aspnet/DataProtection-Keys' as key repository; keys will not be encrypted at rest.
+2025-08-25 00:33:38.140 +05:00 [INF] Executed DbCommand (284ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE DATABASE order_hub_dev;
+2025-08-25 00:33:38.266 +05:00 [INF] Executed DbCommand (9ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE partners (
+    "Id" uuid NOT NULL,
+    "Name" character varying(255) NOT NULL,
+    "Email" character varying(255) NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_partners" PRIMARY KEY ("Id")
+);
+2025-08-25 00:33:38.269 +05:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE payment_gateways (
+    "Id" uuid NOT NULL,
+    "Code" character varying(50) NOT NULL,
+    "DisplayName" character varying(255) NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_payment_gateways" PRIMARY KEY ("Id")
+);
+2025-08-25 00:33:38.274 +05:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE sites (
+    "Id" uuid NOT NULL,
+    "Name" character varying(255) NOT NULL,
+    "BaseUrl" character varying(500) NOT NULL,
+    "ApiKey" character varying(100) NOT NULL,
+    "ApiSecretHash" character varying(255) NOT NULL,
+    "ApiSecretEnc" character varying(500) NOT NULL,
+    "IsActive" boolean NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_sites" PRIMARY KEY ("Id")
+);
+2025-08-25 00:33:38.280 +05:00 [INF] Executed DbCommand (6ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE orders (
+    "Id" uuid NOT NULL,
+    "SiteId" uuid NOT NULL,
+    "WcOrderId" character varying(100) NOT NULL,
+    "Status" character varying(50) NOT NULL,
+    "Currency" character varying(3) NOT NULL,
+    "OrderTotal" numeric(12,2) NOT NULL,
+    "Subtotal" numeric(12,2) NOT NULL,
+    "DiscountTotal" numeric(12,2) NOT NULL,
+    "ShippingTotal" numeric(12,2) NOT NULL,
+    "TaxTotal" numeric(12,2) NOT NULL,
+    "PaymentGatewayCode" character varying(50) NOT NULL,
+    "CustomerName" character varying(255) NOT NULL,
+    "CustomerEmail" character varying(255) NOT NULL,
+    "CustomerPhone" character varying(50),
+    "ShippingAddress" jsonb,
+    "BillingAddress" jsonb,
+    "PlacedAt" timestamp with time zone NOT NULL,
+    "SyncedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_orders" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_orders_sites_SiteId" FOREIGN KEY ("SiteId") REFERENCES sites ("Id") ON DELETE CASCADE
+);
+2025-08-25 00:33:38.283 +05:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE request_nonces (
+    "Id" uuid NOT NULL,
+    "SiteId" uuid NOT NULL,
+    "Nonce" character varying(100) NOT NULL,
+    "Timestamp" timestamp with time zone NOT NULL,
+    "Expires" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_request_nonces" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_request_nonces_sites_SiteId" FOREIGN KEY ("SiteId") REFERENCES sites ("Id") ON DELETE CASCADE
+);
+2025-08-25 00:33:38.285 +05:00 [INF] Executed DbCommand (3ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE site_gateways (
+    "Id" uuid NOT NULL,
+    "SiteId" uuid NOT NULL,
+    "GatewayId" uuid NOT NULL,
+    "WebsiteSharePercent" numeric(5,2) NOT NULL,
+    "Notes" character varying(1000),
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_site_gateways" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_site_gateways_payment_gateways_GatewayId" FOREIGN KEY ("GatewayId") REFERENCES payment_gateways ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_site_gateways_sites_SiteId" FOREIGN KEY ("SiteId") REFERENCES sites ("Id") ON DELETE CASCADE
+);
+2025-08-25 00:33:38.288 +05:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE site_partners (
+    "Id" uuid NOT NULL,
+    "SiteId" uuid NOT NULL,
+    "PartnerId" uuid NOT NULL,
+    "SharePercent" numeric(5,2) NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_site_partners" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_site_partners_partners_PartnerId" FOREIGN KEY ("PartnerId") REFERENCES partners ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_site_partners_sites_SiteId" FOREIGN KEY ("SiteId") REFERENCES sites ("Id") ON DELETE CASCADE
+);
+2025-08-25 00:33:38.291 +05:00 [INF] Executed DbCommand (3ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE order_items (
+    "Id" uuid NOT NULL,
+    "OrderId" uuid NOT NULL,
+    "ProductId" character varying(100) NOT NULL,
+    "Sku" character varying(100),
+    "Name" character varying(500) NOT NULL,
+    "Qty" numeric(10,2) NOT NULL,
+    "Price" numeric(12,2) NOT NULL,
+    "Subtotal" numeric(12,2) NOT NULL,
+    "Total" numeric(12,2) NOT NULL,
+    CONSTRAINT "PK_order_items" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_order_items_orders_OrderId" FOREIGN KEY ("OrderId") REFERENCES orders ("Id") ON DELETE CASCADE
+);
+2025-08-25 00:33:38.293 +05:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE revenue_shares (
+    "Id" uuid NOT NULL,
+    "OrderId" uuid NOT NULL,
+    "PartnerId" uuid NOT NULL,
+    "PartnerShareAmount" numeric(12,2) NOT NULL,
+    "WebsiteShareAmount" numeric(12,2) NOT NULL,
+    "GatewayFeeAmount" numeric(12,2) NOT NULL,
+    "ComputedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_revenue_shares" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_revenue_shares_orders_OrderId" FOREIGN KEY ("OrderId") REFERENCES orders ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_revenue_shares_partners_PartnerId" FOREIGN KEY ("PartnerId") REFERENCES partners ("Id") ON DELETE CASCADE
+);
+2025-08-25 00:33:38.296 +05:00 [INF] Executed DbCommand (3ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE shipping_updates (
+    "Id" uuid NOT NULL,
+    "OrderId" uuid NOT NULL,
+    "Status" character varying(50) NOT NULL,
+    "Provider" character varying(100) NOT NULL,
+    "TrackingNumber" character varying(100),
+    "Payload" jsonb,
+    "OccurredAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_shipping_updates" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_shipping_updates_orders_OrderId" FOREIGN KEY ("OrderId") REFERENCES orders ("Id") ON DELETE CASCADE
+);
+2025-08-25 00:33:38.298 +05:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_order_items_OrderId" ON order_items ("OrderId");
+2025-08-25 00:33:38.299 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_orders_PaymentGatewayCode" ON orders ("PaymentGatewayCode");
+2025-08-25 00:33:38.300 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_orders_PlacedAt" ON orders ("PlacedAt");
+2025-08-25 00:33:38.301 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE UNIQUE INDEX "IX_orders_SiteId_WcOrderId" ON orders ("SiteId", "WcOrderId");
+2025-08-25 00:33:38.302 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE UNIQUE INDEX "IX_request_nonces_SiteId_Nonce" ON request_nonces ("SiteId", "Nonce");
+2025-08-25 00:33:38.303 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_revenue_shares_OrderId" ON revenue_shares ("OrderId");
+2025-08-25 00:33:38.305 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_revenue_shares_PartnerId" ON revenue_shares ("PartnerId");
+2025-08-25 00:33:38.306 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_shipping_updates_OrderId" ON shipping_updates ("OrderId");
+2025-08-25 00:33:38.306 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_site_gateways_GatewayId" ON site_gateways ("GatewayId");
+2025-08-25 00:33:38.307 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_site_gateways_SiteId" ON site_gateways ("SiteId");
+2025-08-25 00:33:38.308 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_site_partners_PartnerId" ON site_partners ("PartnerId");
+2025-08-25 00:33:38.309 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_site_partners_SiteId" ON site_partners ("SiteId");
+2025-08-25 00:33:38.309 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE UNIQUE INDEX "IX_sites_ApiKey" ON sites ("ApiKey");
+2025-08-25 00:33:38.310 +05:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE UNIQUE INDEX "IX_sites_BaseUrl" ON sites ("BaseUrl");
+2025-08-25 00:33:38.318 +05:00 [INF] Starting Order Hub API
+2025-08-25 00:33:38.339 +05:00 [WRN] The WebRootPath was not found: /Users/farhan/Desktop/order-hub/hub/wwwroot. Static files may be unavailable.
+2025-08-25 00:33:38.347 +05:00 [INF] Now listening on: http://localhost:5069
+2025-08-25 00:33:38.347 +05:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-08-25 00:33:38.347 +05:00 [INF] Hosting environment: Development
+2025-08-25 00:33:38.348 +05:00 [INF] Content root path: /Users/farhan/Desktop/order-hub/hub
+2025-08-25 00:34:07.614 +05:00 [INF] Application is shutting down...
