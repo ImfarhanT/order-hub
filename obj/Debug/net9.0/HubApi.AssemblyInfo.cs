@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("HubApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5341cee7958094c68b438779e368a44b4fba74dd")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8eaea6c08ad126755fac0697d0765bdb175971ea")]
 [assembly: System.Reflection.AssemblyProductAttribute("HubApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("HubApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

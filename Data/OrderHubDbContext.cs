@@ -19,6 +19,10 @@ public class OrderHubDbContext : DbContext
     public DbSet<ShippingUpdate> ShippingUpdates { get; set; }
     public DbSet<RevenueShare> RevenueShares { get; set; }
     public DbSet<RequestNonce> RequestNonces { get; set; }
+    public DbSet<PartnerOrder> PartnerOrders { get; set; }
+    public DbSet<RawOrderData> RawOrderData { get; set; }
+    public DbSet<OrderV2> OrdersV2 { get; set; }
+    public DbSet<OrderItemV2> OrderItemsV2 { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -107,5 +111,66 @@ public class OrderHubDbContext : DbContext
             .WithMany()
             .HasForeignKey(rn => rn.SiteId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Configure new Partner relationships
+        modelBuilder.Entity<PartnerOrder>()
+            .HasOne(po => po.Partner)
+            .WithMany(p => p.PartnerOrders)
+            .HasForeignKey(po => po.PartnerId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PartnerOrder>()
+            .HasOne(po => po.Order)
+            .WithMany()
+            .HasForeignKey(po => po.OrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Configure indexes for Partner
+        modelBuilder.Entity<Partner>()
+            .HasIndex(p => p.Email)
+            .IsUnique();
+
+        // Configure indexes for PartnerOrder
+        modelBuilder.Entity<PartnerOrder>()
+            .HasIndex(po => po.PartnerId);
+
+        modelBuilder.Entity<PartnerOrder>()
+            .HasIndex(po => po.OrderId);
+
+        modelBuilder.Entity<PartnerOrder>()
+            .HasIndex(po => po.IsPaid);
+
+        // Configure OrderV2 relationships
+        modelBuilder.Entity<OrderV2>()
+            .HasOne(o => o.Site)
+            .WithMany()
+            .HasForeignKey(o => o.SiteId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<OrderItemV2>()
+            .HasOne(oi => oi.Order)
+            .WithMany(o => o.OrderItems)
+            .HasForeignKey(oi => oi.OrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Configure indexes for OrderV2
+        modelBuilder.Entity<OrderV2>()
+            .HasIndex(o => o.SiteId);
+
+        modelBuilder.Entity<OrderV2>()
+            .HasIndex(o => o.WcOrderId);
+
+        modelBuilder.Entity<OrderV2>()
+            .HasIndex(o => o.Status);
+
+        modelBuilder.Entity<OrderV2>()
+            .HasIndex(o => o.SyncedAt);
+
+        // Configure indexes for OrderItemV2
+        modelBuilder.Entity<OrderItemV2>()
+            .HasIndex(oi => oi.OrderId);
+
+        modelBuilder.Entity<OrderItemV2>()
+            .HasIndex(oi => oi.ProductId);
     }
 }

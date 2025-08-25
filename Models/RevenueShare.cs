@@ -12,8 +12,7 @@ public class RevenueShare
     [Required]
     public Guid OrderId { get; set; }
     
-    [Required]
-    public Guid PartnerId { get; set; }
+    public Guid? PartnerId { get; set; }
     
     [Required]
     [Column(TypeName = "numeric(12,2)")]
@@ -34,5 +33,5 @@ public class RevenueShare
     public virtual Order Order { get; set; } = null!;
     
     [ForeignKey("PartnerId")]
-    public virtual Partner Partner { get; set; } = null!;
+    public virtual Partner? Partner { get; set; }
 }

@@ -1,0 +1,282 @@
+@page
+@model HubApi.Pages.Admin.RawDataModel
+@{
+    ViewData["Title"] = "Raw Order Data";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Raw Order Data</h1>
+        <div class="d-flex gap-2">
+            <span class="badge bg-info">@Model.TotalCount total records</span>
+            <span class="badge bg-secondary">Page @Model.PageNumber of @Model.TotalPages</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h5 class="mb-0">Raw JSON Data from Websites</h5>
+                    <small class="text-muted">This shows the raw JSON data received from WooCommerce sites. Use this to analyze what data structure you want to parse and store.</small>
+                </div>
+                <button type="button" 
+                        class="btn btn-success btn-sm"
+                        onclick="processAllOrders()">
+                    <i class="fas fa-cogs"></i> Process All Pending
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (!Model.RawOrders.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No raw data received yet</h5>
+                    <p class="text-muted">When websites send orders, the raw JSON will appear here for analysis.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Site</th>
+                                <th>Received At</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rawData in Model.RawOrders)
+                            {
+                                <tr class="@(rawData.Processed ? "table-success" : "")">
+                                    <td>
+                                        <strong>@rawData.SiteName</strong>
+                                        <br>
+                                        <small class="text-muted">ID: @rawData.Id.ToString("N")[..8]...</small>
+                                    </td>
+                                    <td>
+                                        <div>@rawData.ReceivedAt.ToString("yyyy-MM-dd HH:mm:ss")</div>
+                                        <small class="text-muted">@rawData.ReceivedAt.ToString("UTC")</small>
+                                    </td>
+                                    <td>
+                                        @if (rawData.Processed)
+                                        {
+                                            <span class="badge bg-success">Processed</span>
+                                            <br>
+                                            <small class="text-muted">@rawData.ProcessedAt?.ToString("yyyy-MM-dd HH:mm:ss")</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning">Pending</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary" 
+                                                    onclick="viewRawData('@rawData.Id', '@rawData.SiteName')">
+                                                <i class="fas fa-eye"></i> View
+                                            </button>
+                                            @if (!rawData.Processed)
+                                            {
+                                                <button type="button" 
+                                                        class="btn btn-primary"
+                                                        onclick="processOrder('@rawData.Id')">
+                                                    <i class="fas fa-cogs"></i> Process Order
+                                                </button>
+                                                <a href="?handler=MarkProcessed&id=@rawData.Id" 
+                                                   class="btn btn-outline-success"
+                                                   onclick="return confirm('Mark this data as processed?')">
+                                                    <i class="fas fa-check"></i> Mark Processed
+                                                </a>
+                                            }
+                                            <a href="?handler=Delete&id=@rawData.Id" 
+                                               class="btn btn-outline-danger"
+                                               onclick="return confirm('Delete this raw data? This action cannot be undone.')">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Raw data pagination">
+                        <ul class="pagination justify-content-center">
+                            @if (Model.PageNumber > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=@(Model.PageNumber - 1)&pageSize=@Model.PageSize">Previous</a>
+                                </li>
+                            }
+
+                            @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
+                            {
+                                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                    <a class="page-link" href="?page=@i&pageSize=@Model.PageSize">@i</a>
+                                </li>
+                            }
+
+                            @if (Model.PageNumber < Model.TotalPages)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=@(Model.PageNumber + 1)&pageSize=@Model.PageSize">Next</a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Raw Data Modal -->
+<div class="modal fade" id="rawDataModal" tabindex="-1" aria-labelledby="rawDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rawDataModalLabel">Raw JSON Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>Site:</strong> <span id="modalSiteName"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Received At:</strong> <span id="modalReceivedAt"></span>
+                </div>
+                <div class="mb-3">
+                    <label for="jsonContent" class="form-label">Raw JSON Data:</label>
+                    <textarea id="jsonContent" class="form-control" rows="20" readonly></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="copyToClipboard()">
+                    <i class="fas fa-copy"></i> Copy JSON
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function processAllOrders() {
+            if (!confirm('Process all pending raw order data entries? This will create/update orders for all unprocessed entries.')) {
+                return;
+            }
+            
+            // Show loading state
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing All...';
+            button.disabled = true;
+            
+            fetch('/api/v1/orderprocessing/process-all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(`Processing complete!\n\nTotal processed: ${data.results.length}\nSuccessful: ${data.success_count}\nFailed: ${data.failure_count}\n\nMessage: ${data.message}`);
+                // Reload the page to show updated status
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error processing all orders. Please check the console for details.');
+            })
+            .finally(() => {
+                // Restore button state
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        }
+        
+        function processOrder(rawOrderDataId) {
+            if (!confirm('Process this raw order data and create/update the order in the system?')) {
+                return;
+            }
+            
+            // Show loading state
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            button.disabled = true;
+            
+            fetch(`/api/v1/orderprocessingv2/process/${rawOrderDataId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Order processed successfully!\n\nOrder ID: ${data.processedOrderId}\nMessage: ${data.message}`);
+                    // Reload the page to show updated status
+                    location.reload();
+                } else {
+                    alert(`Failed to process order:\n\n${data.message}\n\nErrors: ${data.errors?.join(', ') || 'Unknown error'}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error processing order. Please check the console for details.');
+            })
+            .finally(() => {
+                // Restore button state
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        }
+        
+        function viewRawData(id, siteName) {
+            // Fetch the raw data for this ID
+            fetch(`/api/rawdata/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('modalSiteName').textContent = siteName;
+                    document.getElementById('modalReceivedAt').textContent = new Date(data.receivedAt).toLocaleString();
+                    document.getElementById('jsonContent').value = JSON.stringify(data.rawJson, null, 2);
+                    
+                    // Show the modal
+                    new bootstrap.Modal(document.getElementById('rawDataModal')).show();
+                })
+                .catch(error => {
+                    console.error('Error fetching raw data:', error);
+                    alert('Error fetching raw data. Please try again.');
+                });
+        }
+
+        function copyToClipboard() {
+            const jsonContent = document.getElementById('jsonContent');
+            jsonContent.select();
+            document.execCommand('copy');
+            
+            // Show feedback
+            const copyBtn = event.target;
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            copyBtn.classList.remove('btn-primary');
+            copyBtn.classList.add('btn-success');
+            
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+                copyBtn.classList.remove('btn-success');
+                copyBtn.classList.add('btn-primary');
+            }, 2000);
+        }
+    </script>
+}

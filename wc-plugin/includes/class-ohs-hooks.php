@@ -1,157 +1,195 @@
 <?php
 /**
- * Hooks class for WooCommerce integration
+ * WooCommerce hooks integration for Order Hub Sync
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class OHS_Hooks
-{
-    /**
-     * Client instance
-     */
+class OHS_Hooks {
+    
     private $client;
-
-    /**
-     * Constructor
-     */
-    public function __construct()
-    {
+    
+    public function __construct() {
         $this->client = new OHS_Client();
-
-        // Hook into WooCommerce events
-        add_action('woocommerce_checkout_order_processed', array($this, 'on_order_created'), 10, 1);
-        add_action('woocommerce_order_status_changed', array($this, 'on_order_status_changed'), 10, 3);
         
-        // AJAX handlers
-        add_action('wp_ajax_ohs_backfill_orders', array($this, 'ajax_backfill_orders'));
+        // Hook into order creation and status changes
+        add_action('woocommerce_checkout_order_processed', array($this, 'on_order_created'), 10, 1);
+        add_action('woocommerce_order_status_changed', array($this, 'on_order_status_changed'), 10, 4);
+        
+        // Hook into order updates
+        add_action('woocommerce_order_refunded', array($this, 'on_order_refunded'), 10, 2);
+        add_action('woocommerce_order_status_completed', array($this, 'on_order_completed'), 10, 1);
         
         // Schedule failed order processing
         add_action('init', array($this, 'schedule_failed_order_processing'));
         add_action('ohs_process_failed_orders', array($this, 'process_failed_orders'));
     }
-
+    
     /**
      * Handle new order creation
      */
-    public function on_order_created($order_id)
-    {
-        if (!$this->client->is_configured()) {
+    public function on_order_created($order_id) {
+        $order = wc_get_order($order_id);
+        if (!$order) {
             return;
         }
-
-        // Add a small delay to ensure order is fully saved
-        wp_schedule_single_event(time() + 5, 'ohs_send_order', array($order_id));
+        
+        $this->log("New order created: {$order->get_order_number()}");
+        
+        // Send order to Order Hub
+        $result = $this->client->send_order($order);
+        
+        if (!$result['success']) {
+            $this->log("Failed to send new order {$order->get_order_number()}: {$result['error']}");
+        }
     }
-
+    
     /**
      * Handle order status changes
      */
-    public function on_order_status_changed($order_id, $old_status, $new_status)
-    {
-        if (!$this->client->is_configured()) {
+    public function on_order_status_changed($order_id, $old_status, $new_status, $order) {
+        if (!$order) {
             return;
         }
-
-        // Send order update
-        $this->client->send_order($order_id);
-
-        // Send shipping update for certain statuses
-        if (in_array($new_status, array('processing', 'completed', 'shipped'))) {
-            $provider = '';
-            $tracking_number = '';
-            
-            // Try to get tracking info from order meta
-            $order = wc_get_order($order_id);
-            if ($order) {
-                $provider = $order->get_meta('_tracking_provider') ?: '';
-                $tracking_number = $order->get_meta('_tracking_number') ?: '';
-            }
-
-            $this->client->send_shipping_update($order_id, $new_status, $provider, $tracking_number);
+        
+        $this->log("Order {$order->get_order_number()} status changed from {$old_status} to {$new_status}");
+        
+        // Send updated order to Order Hub
+        $result = $this->client->send_order($order);
+        
+        if (!$result['success']) {
+            $this->log("Failed to send order status update {$order->get_order_number()}: {$result['error']}");
         }
     }
-
+    
     /**
-     * AJAX handler for backfill orders
+     * Handle order refunds
      */
-    public function ajax_backfill_orders()
-    {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'ohs_nonce')) {
-            wp_die('Invalid nonce');
+    public function on_order_refunded($order_id, $refund_id) {
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return;
         }
-
-        // Check permissions
-        if (!current_user_can('manage_woocommerce')) {
-            wp_die('Insufficient permissions');
+        
+        $this->log("Order {$order->get_order_number()} was refunded");
+        
+        // Send updated order to Order Hub
+        $result = $this->client->send_order($order);
+        
+        if (!$result['success']) {
+            $this->log("Failed to send refunded order {$order->get_order_number()}: {$result['error']}");
         }
-
-        $count = intval($_POST['count']);
-        $count = min(max($count, 1), 1000); // Limit to 1-1000
-
-        $processed = 0;
-        $failed = 0;
-
-        // Get recent orders
-        $orders = wc_get_orders(array(
-            'limit' => $count,
-            'orderby' => 'date',
-            'order' => 'DESC',
-            'status' => array('processing', 'completed', 'on-hold')
-        ));
-
-        foreach ($orders as $order) {
-            if ($this->client->send_order($order->get_id())) {
-                $processed++;
-            } else {
-                $failed++;
-            }
-
-            // Small delay to avoid overwhelming the API
-            usleep(100000); // 0.1 second
-        }
-
-        $message = sprintf(
-            'Backfill completed. Processed: %d, Failed: %d',
-            $processed,
-            $failed
-        );
-
-        wp_send_json_success(array('message' => $message));
     }
-
+    
+    /**
+     * Handle order completion
+     */
+    public function on_order_completed($order_id) {
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return;
+        }
+        
+        $this->log("Order {$order->get_order_number()} was completed");
+        
+        // Send updated order to Order Hub
+        $result = $this->client->send_order($order);
+        
+        if (!$result['success']) {
+            $this->log("Failed to send completed order {$order->get_order_number()}: {$result['error']}");
+        }
+    }
+    
     /**
      * Schedule failed order processing
      */
-    public function schedule_failed_order_processing()
-    {
+    public function schedule_failed_order_processing() {
         if (!wp_next_scheduled('ohs_process_failed_orders')) {
             wp_schedule_event(time(), 'hourly', 'ohs_process_failed_orders');
         }
     }
-
+    
     /**
-     * Process failed orders
+     * Process failed orders for retry
      */
-    public function process_failed_orders()
-    {
-        if (!$this->client->is_configured()) {
+    public function process_failed_orders() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'ohs_failed_orders';
+        
+        // Get failed orders that are ready for retry
+        $failed_orders = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table_name} 
+             WHERE next_retry <= %s AND retry_count < 3
+             ORDER BY next_retry ASC
+             LIMIT 10",
+            current_time('mysql')
+        ));
+        
+        if (empty($failed_orders)) {
             return;
         }
-
-        $this->client->process_failed_orders();
+        
+        $this->log("Processing " . count($failed_orders) . " failed orders for retry");
+        
+        foreach ($failed_orders as $failed_order) {
+            $this->retry_failed_order($failed_order);
+        }
     }
-
+    
     /**
-     * Send order (scheduled event handler)
+     * Retry a failed order
      */
-    public function send_order($order_id)
-    {
-        if ($this->client->is_configured()) {
-            $this->client->send_order($order_id);
+    private function retry_failed_order($failed_order) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'ohs_failed_orders';
+        $order = wc_get_order($failed_order->order_id);
+        
+        if (!$order) {
+            // Order no longer exists, remove from failed orders
+            $wpdb->delete($table_name, array('id' => $failed_order->id), array('%d'));
+            return;
+        }
+        
+        $this->log("Retrying failed order {$order->get_order_number()} (attempt " . ($failed_order->retry_count + 1) . ")");
+        
+        // Try to send the order again
+        $result = $this->client->send_order($order);
+        
+        if ($result['success']) {
+            // Success! Remove from failed orders
+            $wpdb->delete($table_name, array('id' => $failed_order->id), array('%d'));
+            $this->log("Successfully retried order {$order->get_order_number()}");
+        } else {
+            // Still failed, update retry count and next retry time
+            $retry_count = $failed_order->retry_count + 1;
+            $next_retry = date('Y-m-d H:i:s', strtotime('+' . ($retry_count * 2) . ' hours'));
+            
+            $wpdb->update(
+                $table_name,
+                array(
+                    'retry_count' => $retry_count,
+                    'next_retry' => $next_retry,
+                    'error_message' => $result['error']
+                ),
+                array('id' => $failed_order->id),
+                array('%d', '%s', '%s'),
+                array('%d')
+            );
+            
+            $this->log("Failed to retry order {$order->get_order_number()}: {$result['error']}");
+        }
+    }
+    
+    /**
+     * Log message if debug logging is enabled
+     */
+    private function log($message) {
+        if (get_option('ohs_debug_log')) {
+            error_log('[Order Hub Sync Hooks] ' . $message);
         }
     }
 }

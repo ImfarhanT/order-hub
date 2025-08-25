@@ -26,6 +26,8 @@ builder.Services.AddDbContext<OrderHubDbContext>(options =>
 // Add services
 builder.Services.AddScoped<IHmacService, HmacService>();
 builder.Services.AddScoped<ICryptoService, CryptoService>();
+builder.Services.AddScoped<IOrderProcessingService, OrderProcessingServiceV2>();
+builder.Services.AddScoped<OrderProcessingServiceV2>();
 
 // Add Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -83,21 +85,48 @@ app.MapRazorPages();
 // Simple health check endpoint
 app.MapGet("/", () => "Order Hub API is running!");
 
-// Ensure database is created and migrated (non-blocking)
-_ = Task.Run(async () =>
+// Ensure database is created and migrations are applied
+using (var scope = app.Services.CreateScope())
 {
+    var context = scope.ServiceProvider.GetRequiredService<OrderHubDbContext>();
+    await context.Database.EnsureCreatedAsync();
+    
+    // Manually create RawOrderData table if it doesn't exist
     try
     {
-        using var scope = app.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<OrderHubDbContext>();
-        await context.Database.EnsureCreatedAsync();
-        Log.Information("Database connection established successfully");
+        var tableExists = await context.Database.SqlQueryRaw<bool>(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'RawOrderData')").FirstOrDefaultAsync();
+        
+        if (!tableExists)
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE ""RawOrderData"" (
+                    ""Id"" uuid NOT NULL,
+                    ""SiteId"" uuid NOT NULL,
+                    ""SiteName"" character varying(255) NOT NULL,
+                    ""RawJson"" text NOT NULL,
+                    ""ReceivedAt"" timestamp with time zone NOT NULL,
+                    ""Processed"" boolean NOT NULL DEFAULT false,
+                    ""ProcessedAt"" timestamp with time zone NULL,
+                    CONSTRAINT ""PK_RawOrderData"" PRIMARY KEY (""Id"")
+                );
+                
+                ALTER TABLE ""RawOrderData"" 
+                ADD CONSTRAINT ""FK_RawOrderData_Sites_SiteId"" 
+                FOREIGN KEY (""SiteId"") REFERENCES ""sites""(""Id"") ON DELETE CASCADE;
+                
+                CREATE INDEX ""IX_RawOrderData_SiteId"" ON ""RawOrderData"" (""SiteId"");
+                CREATE INDEX ""IX_RawOrderData_ReceivedAt"" ON ""RawOrderData"" (""ReceivedAt"");
+            ");
+            
+            Log.Information("RawOrderData table created successfully");
+        }
     }
     catch (Exception ex)
     {
-        Log.Warning(ex, "Database connection failed during startup, will retry later");
+        Log.Warning(ex, "Could not create RawOrderData table - it may already exist");
     }
-});
+}
 
 try
 {

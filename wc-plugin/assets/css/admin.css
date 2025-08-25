@@ -1,0 +1,437 @@
+/* Order Hub Sync Admin Styles */
+
+.ohs-admin-container {
+    margin-top: 20px;
+}
+
+/* Tab Navigation */
+.nav-tab-wrapper {
+    margin-bottom: 20px;
+}
+
+.nav-tab {
+    text-decoration: none;
+    padding: 8px 16px;
+    margin-right: 5px;
+    border: 1px solid #c3c4c7;
+    background: #f6f7f7;
+    color: #50575e;
+    border-radius: 3px 3px 0 0;
+}
+
+.nav-tab:hover {
+    background: #f0f0f1;
+    color: #135e96;
+}
+
+.nav-tab-active {
+    background: #fff;
+    border-bottom-color: #fff;
+    color: #135e96;
+}
+
+/* Tab Content */
+.tab-content {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-top: none;
+    padding: 20px;
+    border-radius: 0 0 3px 3px;
+}
+
+/* Cards */
+.card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 3px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.card h2 {
+    margin-top: 0;
+    color: #1d2327;
+}
+
+/* Form Styles */
+.form-table th {
+    width: 200px;
+    padding: 15px 10px 15px 0;
+}
+
+.form-table td {
+    padding: 15px 10px;
+}
+
+.form-table input[type="text"],
+.form-table input[type="url"],
+.form-table input[type="password"],
+.form-table select {
+    width: 400px;
+}
+
+.form-table input[type="number"] {
+    width: 100px;
+}
+
+.form-table input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.form-table .description {
+    margin-top: 5px;
+    color: #646970;
+    font-style: italic;
+}
+
+/* Buttons */
+.button {
+    margin-right: 10px;
+}
+
+.button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Progress Bar */
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background-color: #f0f0f1;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #2271b1;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+/* Status Messages */
+#connection-result,
+#backfill-status,
+#backfill-results {
+    margin-top: 15px;
+}
+
+.notice {
+    padding: 12px;
+    margin: 5px 0;
+    border-left: 4px solid #00a32a;
+    background: #f0f6fc;
+}
+
+.notice.notice-error {
+    border-left-color: #d63638;
+    background: #fcf0f1;
+}
+
+.notice.notice-success {
+    border-left-color: #00a32a;
+    background: #f0f6fc;
+}
+
+.notice.notice-info {
+    border-left-color: #72aee6;
+    background: #f0f6fc;
+}
+
+/* Results Table */
+#backfill-results table {
+    margin-top: 15px;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+#backfill-results th,
+#backfill-results td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #c3c4c7;
+}
+
+#backfill-results th {
+    background-color: #f6f7f7;
+    font-weight: 600;
+}
+
+#backfill-results .success {
+    color: #00a32a;
+    font-weight: bold;
+}
+
+#backfill-results .error {
+    color: #d63638;
+    font-style: italic;
+}
+
+/* Form Validation */
+input.error,
+select.error {
+    border-color: #d63638 !important;
+    box-shadow: 0 0 0 1px #d63638 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 782px) {
+    .form-table th {
+        width: auto;
+        display: block;
+        padding-bottom: 0;
+    }
+    
+    .form-table td {
+        display: block;
+        padding-left: 0;
+        padding-top: 5px;
+    }
+    
+    .form-table input[type="text"],
+    .form-table input[type="url"],
+    .form-table input[type="password"],
+    .form-table select {
+        width: 100%;
+        max-width: 400px;
+    }
+    
+    .button {
+        display: block;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+}
+
+/* Debug Logs */
+#debug-logs {
+    background: #f6f7f7;
+    padding: 15px;
+    border-radius: 3px;
+}
+
+#debug-logs code {
+    background: #fff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+/* Debug Controls */
+.debug-controls {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+.debug-controls .button {
+    margin-right: 10px;
+}
+
+.debug-controls label {
+    margin-left: 15px;
+    font-weight: normal;
+}
+
+/* Debug Logs Content */
+#debug-logs-content {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    background: #fff;
+    padding: 10px;
+    border-radius: 3px;
+}
+
+.log-entry {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-left: 4px solid #ddd;
+    background: #f9f9f9;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.log-entry:last-child {
+    margin-bottom: 0;
+}
+
+.log-entry .timestamp {
+    color: #666;
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.log-entry .level {
+    display: inline-block;
+    min-width: 50px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-right: 10px;
+}
+
+.log-entry .level.info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.log-entry .level.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.log-entry .level.warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.log-entry .level.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.log-entry .message {
+    color: #333;
+}
+
+.log-entry .context {
+    color: #666;
+    font-style: italic;
+    margin-left: 10px;
+}
+
+/* Log Stats */
+.log-stats {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f0f6fc;
+    border: 1px solid #c3c4c7;
+    border-radius: 3px;
+}
+
+.log-stats p {
+    margin: 5px 0;
+}
+
+/* Local Orders */
+.local-orders-stats {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f0f6fc;
+    border: 1px solid #c3c4c7;
+    border-radius: 3px;
+}
+
+.local-orders-stats p {
+    margin: 5px 0;
+}
+
+.local-orders-table {
+    margin-top: 20px;
+}
+
+.local-orders-table table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.local-orders-table th,
+.local-orders-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #c3c4c7;
+}
+
+.local-orders-table th {
+    background-color: #f6f7f7;
+    font-weight: 600;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 800px;
+    border-radius: 5px;
+    position: relative;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    right: 20px;
+    top: 15px;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#payload-content {
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 3px;
+    overflow-x: auto;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Multiple Select Styling */
+select[multiple] {
+    height: 120px;
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Success/Error Icons */
+.success-icon::before {
+    content: "✓";
+    color: #00a32a;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.error-icon::before {
+    content: "✗";
+    color: #d63638;
+    font-weight: bold;
+    margin-right: 5px;
+}

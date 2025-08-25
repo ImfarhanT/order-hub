@@ -28,14 +28,17 @@ public class DashboardModel : PageModel
     {
         // Get basic counts
         TotalSites = await _context.Sites.CountAsync(s => s.IsActive);
-        TotalOrders = await _context.Orders.CountAsync();
-        TotalRevenue = await _context.Orders.SumAsync(o => o.OrderTotal);
+        TotalOrders = await _context.OrdersV2.CountAsync();
         ActivePartners = await _context.Partners.CountAsync();
 
+        // Get all orders for revenue calculation (fetch first, then calculate in memory)
+        var allOrders = await _context.OrdersV2.ToListAsync();
+        TotalRevenue = allOrders.Sum(o => decimal.Parse(o.OrderTotal));
+
         // Get recent orders
-        RecentOrders = await _context.Orders
+        RecentOrders = await _context.OrdersV2
             .Include(o => o.Site)
-            .OrderByDescending(o => o.PlacedAt)
+            .OrderByDescending(o => o.SyncedAt)
             .Take(10)
             .Select(o => new OrderSummary
             {
@@ -43,11 +46,27 @@ public class DashboardModel : PageModel
                 WcOrderId = o.WcOrderId,
                 SiteName = o.Site.Name,
                 CustomerName = o.CustomerName,
-                OrderTotal = o.OrderTotal,
+                OrderTotal = 0, // Will be set after fetching
                 Status = o.Status,
-                PlacedAt = o.PlacedAt
+                PlacedAt = DateTime.UtcNow // Will be set after fetching
             })
             .ToListAsync();
+
+        // Update the order totals and dates after fetching
+        var recentOrderIds = RecentOrders.Select(o => o.Id).ToList();
+        var recentOrderData = await _context.OrdersV2
+            .Where(o => recentOrderIds.Contains(o.Id))
+            .ToListAsync();
+
+        foreach (var order in RecentOrders)
+        {
+            var orderData = recentOrderData.FirstOrDefault(o => o.Id == order.Id);
+            if (orderData != null)
+            {
+                order.OrderTotal = decimal.Parse(orderData.OrderTotal);
+                order.PlacedAt = DateTime.Parse(orderData.PlacedAt);
+            }
+        }
 
         // Get site statistics
         SiteStats = await _context.Sites
@@ -55,9 +74,16 @@ public class DashboardModel : PageModel
             .Select(s => new SiteStat
             {
                 SiteName = s.Name,
-                OrderCount = _context.Orders.Count(o => o.SiteId == s.Id),
-                TotalRevenue = _context.Orders.Where(o => o.SiteId == s.Id).Sum(o => o.OrderTotal)
+                OrderCount = _context.OrdersV2.Count(o => o.SiteId == s.Id),
+                TotalRevenue = 0 // Will be calculated in memory
             })
             .ToListAsync();
+
+        // Calculate site revenues in memory
+        foreach (var stat in SiteStats)
+        {
+            var siteOrders = allOrders.Where(o => o.SiteId == _context.Sites.First(s => s.Name == stat.SiteName).Id);
+            stat.TotalRevenue = siteOrders.Sum(o => decimal.Parse(o.OrderTotal));
+        }
     }
 }

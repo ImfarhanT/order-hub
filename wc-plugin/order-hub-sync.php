@@ -1,15 +1,14 @@
 <?php
 /**
  * Plugin Name: Order Hub Sync
- * Plugin URI: https://github.com/your-org/order-hub
- * Description: Synchronize WooCommerce orders with Order Hub for centralized management
- * Version: 1.0.0
- * Author: Order Hub Team
+ * Plugin URI: https://github.com/ImfarhanT/order-hub
+ * Description: Syncs WooCommerce orders with Order Hub for centralized order management
+ * Version: 2.0.0
+ * Author: Farhan
  * License: GPL v2 or later
  * Text Domain: order-hub-sync
- * Domain Path: /languages
  * Requires at least: 5.0
- * Tested up to: 6.4
+ * Tested up to: 6.8
  * WC requires at least: 5.0
  * WC tested up to: 8.0
  */
@@ -20,79 +19,69 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('OHS_VERSION', '1.0.0');
-define('OHS_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('OHS_VERSION', '2.0.0');
 define('OHS_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('OHS_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
-// Include required files
-require_once OHS_PLUGIN_DIR . 'includes/class-ohs-admin.php';
-require_once OHS_PLUGIN_DIR . 'includes/class-ohs-client.php';
-require_once OHS_PLUGIN_DIR . 'includes/class-ohs-hooks.php';
-
-/**
- * Main plugin class
- */
-class OrderHubSync
-{
-    /**
-     * Plugin instance
-     */
-    private static $instance = null;
-
-    /**
-     * Get plugin instance
-     */
-    public static function get_instance()
-    {
-        if (null === self::$instance) {
-            self::$instance = new self();
-        }
-        return self::$instance;
+// Check if WooCommerce is active
+function ohs_check_woocommerce() {
+    if (!class_exists('WooCommerce')) {
+        add_action('admin_notices', function() {
+            echo '<div class="notice notice-error"><p>Order Hub Sync requires WooCommerce to be installed and activated.</p></div>';
+        });
+        return false;
     }
-
-    /**
-     * Constructor
-     */
-    private function __construct()
-    {
-        add_action('plugins_loaded', array($this, 'init'));
-    }
-
-    /**
-     * Initialize plugin
-     */
-    public function init()
-    {
-        // Check if WooCommerce is active
-        if (!class_exists('WooCommerce')) {
-            add_action('admin_notices', array($this, 'woocommerce_missing_notice'));
-            return;
-        }
-
-        // Initialize components
-        new OHS_Admin();
-        new OHS_Hooks();
-    }
-
-    /**
-     * WooCommerce missing notice
-     */
-    public function woocommerce_missing_notice()
-    {
-        echo '<div class="notice notice-error"><p>';
-        echo __('Order Hub Sync requires WooCommerce to be installed and activated.', 'order-hub-sync');
-        echo '</p></div>';
-    }
+    return true;
 }
 
 // Initialize plugin
-OrderHubSync::get_instance();
+function ohs_init() {
+    if (!ohs_check_woocommerce()) {
+        return;
+    }
+    
+    // Load plugin classes
+    require_once OHS_PLUGIN_PATH . 'includes/class-ohs-admin.php';
+    require_once OHS_PLUGIN_PATH . 'includes/class-ohs-client.php';
+    require_once OHS_PLUGIN_PATH . 'includes/class-ohs-hooks.php';
+    
+    // Initialize admin
+    if (is_admin()) {
+        new OHS_Admin();
+    }
+    
+    // Initialize hooks
+    new OHS_Hooks();
+}
+add_action('plugins_loaded', 'ohs_init');
 
 // Activation hook
 register_activation_hook(__FILE__, 'ohs_activate');
-function ohs_activate()
-{
-    // Add default options
+function ohs_activate() {
+    // Create custom table for failed orders
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'ohs_failed_orders';
+    $charset_collate = $wpdb->get_charset_collate();
+    
+    $sql = "CREATE TABLE $table_name (
+        id mediumint(9) NOT NULL AUTO_INCREMENT,
+        order_id bigint(20) NOT NULL,
+        site_id bigint(20) NOT NULL,
+        payload longtext NOT NULL,
+        error_message text,
+        retry_count int(11) DEFAULT 0,
+        next_retry datetime DEFAULT NULL,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY order_id (order_id),
+        KEY next_retry (next_retry)
+    ) $charset_collate;";
+    
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+    
+    // Set default options
     add_option('ohs_hub_url', '');
     add_option('ohs_api_key', '');
     add_option('ohs_api_secret', '');
@@ -102,21 +91,22 @@ function ohs_activate()
 
 // Deactivation hook
 register_deactivation_hook(__FILE__, 'ohs_deactivate');
-function ohs_deactivate()
-{
-    // Clear scheduled events
+function ohs_deactivate() {
+    // Clear any scheduled events
     wp_clear_scheduled_hook('ohs_process_failed_orders');
 }
 
 // Uninstall hook
 register_uninstall_hook(__FILE__, 'ohs_uninstall');
-function ohs_uninstall()
-{
+function ohs_uninstall() {
     // Remove options
     delete_option('ohs_hub_url');
     delete_option('ohs_api_key');
     delete_option('ohs_api_secret');
     delete_option('ohs_debug_log');
     delete_option('ohs_gateway_fees');
-    delete_option('ohs_failed_orders');
+    
+    // Drop custom table
+    global $wpdb;
+    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}ohs_failed_orders");
 }

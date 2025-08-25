@@ -1,128 +1,203 @@
 <?php
 /**
- * Client class for Order Hub API communication
+ * Client class for communicating with Order Hub API
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class OHS_Client
-{
-    /**
-     * Hub URL
-     */
+class OHS_Client {
+    
     private $hub_url;
-
-    /**
-     * API Key
-     */
     private $api_key;
-
-    /**
-     * API Secret
-     */
     private $api_secret;
-
-    /**
-     * Constructor
-     */
-    public function __construct()
-    {
+    private $debug_log;
+    
+    public function __construct() {
         $this->hub_url = get_option('ohs_hub_url');
         $this->api_key = get_option('ohs_api_key');
         $this->api_secret = get_option('ohs_api_secret');
+        $this->debug_log = get_option('ohs_debug_log');
     }
-
+    
     /**
-     * Check if client is configured
+     * Test connection to Order Hub
      */
-    public function is_configured()
-    {
-        return !empty($this->hub_url) && !empty($this->api_key) && !empty($this->api_secret);
+    public function test_connection() {
+        if (empty($this->hub_url) || empty($this->api_key)) {
+            return array(
+                'success' => false,
+                'message' => 'Hub URL and API Key are required'
+            );
+        }
+        
+        // Test basic connectivity first - try the root URL
+        $test_url = trailingslashit($this->hub_url);
+        
+        $response = wp_remote_get($test_url, array(
+            'timeout' => 30,
+            'headers' => array(
+                'Content-Type' => 'application/json',
+                'X-API-Key' => $this->api_key
+            )
+        ));
+        
+        if (is_wp_error($response)) {
+            $this->log('Test connection failed: ' . $response->get_error_message());
+            return array(
+                'success' => false,
+                'message' => 'Connection failed: ' . $response->get_error_message()
+            );
+        }
+        
+        $status_code = wp_remote_retrieve_response_code($response);
+        $this->log("Test connection response: HTTP $status_code");
+        
+        if ($status_code === 200) {
+            $this->log('Test connection successful - Hub is reachable');
+            return array('success' => true, 'message' => 'Hub is reachable and responding');
+        } elseif ($status_code === 401) {
+            $this->log('Test connection failed: Authentication failed');
+            return array(
+                'success' => false,
+                'message' => 'Authentication failed. Check your API key.'
+            );
+        } elseif ($status_code === 404) {
+            $this->log('Test connection: Endpoint not found, but Hub is reachable');
+            return array(
+                'success' => true, 
+                'message' => 'Hub is reachable! API endpoints may not be fully configured yet.'
+            );
+        } else {
+            $this->log("Test connection failed with status: $status_code");
+            return array(
+                'success' => false,
+                'message' => "Connection failed with status code: $status_code"
+            );
+        }
     }
-
+    
     /**
-     * Send order to hub
+     * Send order to Order Hub
      */
-    public function send_order($order_id)
-    {
-        if (!$this->is_configured()) {
-            $this->log('Client not configured');
-            return false;
+    public function send_order($order) {
+        if (!$order instanceof WC_Order) {
+            return array(
+                'success' => false,
+                'error' => 'Invalid order object'
+            );
         }
-
-        $order = wc_get_order($order_id);
-        if (!$order) {
-            $this->log('Order not found: ' . $order_id);
-            return false;
-        }
-
+        
         $payload = $this->build_order_payload($order);
-        $endpoint = $this->hub_url . '/api/orders';
-
-        $result = $this->make_request($endpoint, $payload);
         
-        if ($result) {
-            $this->log('Order sent successfully: ' . $order_id);
-            return true;
+        // Send order to Order Hub API
+        $response = wp_remote_post($this->get_api_url('orders/sync'), array(
+            'timeout' => 30,
+            'headers' => array(
+                'Content-Type' => 'application/json',
+                'X-API-Key' => $this->api_key
+            ),
+            'body' => json_encode($payload)
+        ));
+        
+        if (is_wp_error($response)) {
+            $error_msg = $response->get_error_message();
+            $this->log("Failed to send order {$order->get_order_number()}: $error_msg");
+            $this->store_failed_order($order->get_id(), $payload, $error_msg);
+            
+            return array(
+                'success' => false,
+                'error' => $error_msg
+            );
+        }
+        
+        $status_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        
+        if ($status_code === 200) {
+            $this->log("Order {$order->get_order_number()} sent successfully to Order Hub");
+            return array('success' => true, 'message' => 'Order synced to Order Hub successfully');
         } else {
-            $this->log('Failed to send order: ' . $order_id);
-            $this->store_failed_order($order_id, $payload);
-            return false;
+            $this->log("Failed to send order {$order->get_order_number()}: Status $status_code, Response: $body");
+            $this->store_failed_order($order->get_id(), $payload, "HTTP $status_code: $body");
+            
+            return array(
+                'success' => false,
+                'error' => "HTTP $status_code: $body"
+            );
         }
     }
-
+    
     /**
-     * Send shipping update to hub
+     * Backfill existing orders
      */
-    public function send_shipping_update($order_id, $status, $provider = '', $tracking_number = '', $payload = array())
-    {
-        if (!$this->is_configured()) {
-            $this->log('Client not configured');
-            return false;
-        }
-
-        $order = wc_get_order($order_id);
-        if (!$order) {
-            $this->log('Order not found: ' . $order_id);
-            return false;
-        }
-
-        $update_data = array(
-            'site_api_key' => $this->api_key,
-            'nonce' => wp_generate_uuid4(),
-            'timestamp' => time(),
-            'wc_order_id' => $order->get_order_number(),
-            'status' => $status,
-            'provider' => $provider,
-            'tracking_number' => $tracking_number,
-            'payload' => $payload,
-            'occurred_at' => gmdate('c')
+    public function backfill_orders($statuses, $limit = 50) {
+        $args = array(
+            'status' => $statuses,
+            'limit' => $limit,
+            'orderby' => 'date',
+            'order' => 'DESC'
         );
-
-        // Build signature
-        $signature_base = $this->api_key . '|' . $update_data['timestamp'] . '|' . $update_data['nonce'] . '|' . $update_data['wc_order_id'] . '|0';
-        $update_data['signature'] = $this->compute_signature($signature_base, $this->api_secret);
-
-        $endpoint = $this->hub_url . '/api/shipping';
-
-        $result = $this->make_request($endpoint, $update_data);
         
-        if ($result) {
-            $this->log('Shipping update sent successfully: ' . $order_id);
-            return true;
-        } else {
-            $this->log('Failed to send shipping update: ' . $order_id);
-            return false;
+        $orders = wc_get_orders($args);
+        
+        if (empty($orders)) {
+            return array(
+                'success' => false,
+                'message' => 'No orders found matching the selected criteria.'
+            );
         }
+        
+        $success_count = 0;
+        $failed_count = 0;
+        $results = array();
+        
+        $this->log("Starting backfill for " . count($orders) . " orders with statuses: " . implode(', ', $statuses));
+        
+        foreach ($orders as $order) {
+            $result = $this->send_order($order);
+            
+            if ($result['success']) {
+                $success_count++;
+                $results[] = array(
+                    'order_id' => $order->get_order_number(),
+                    'status' => 'success',
+                    'message' => $result['message'] ?? 'Order processed successfully'
+                );
+            } else {
+                $failed_count++;
+                $results[] = array(
+                    'order_id' => $order->get_order_number(),
+                    'status' => 'failed',
+                    'error' => $result['error']
+                );
+            }
+            
+            // Small delay to avoid overwhelming the system
+            usleep(100000); // 0.1 second
+        }
+        
+        $summary = array(
+            'total' => count($orders),
+            'success' => $success_count,
+            'failed' => $failed_count,
+            'statuses' => implode(', ', $statuses)
+        );
+        
+        $this->log("Backfill completed: {$success_count} successful, {$failed_count} failed out of {$summary['total']} total");
+        
+        return array(
+            'success' => true,
+            'summary' => $summary,
+            'results' => $results
+        );
     }
-
+    
     /**
-     * Build order payload
+     * Build order payload for API
      */
-    private function build_order_payload($order)
-    {
+    private function build_order_payload($order) {
         $items = array();
         foreach ($order->get_items() as $item) {
             $items[] = array(
@@ -135,11 +210,9 @@ class OHS_Client
                 'total' => $item->get_total()
             );
         }
-
-        $order_data = array(
-            'site_api_key' => $this->api_key,
-            'nonce' => wp_generate_uuid4(),
-            'timestamp' => time(),
+        
+        $payload = array(
+            'api_key' => $this->api_key,
             'order' => array(
                 'wc_order_id' => $order->get_order_number(),
                 'status' => $order->get_status(),
@@ -155,34 +228,22 @@ class OHS_Client
                 'customer_phone' => $order->get_billing_phone(),
                 'shipping_address' => $this->format_address($order->get_address('shipping')),
                 'billing_address' => $this->format_address($order->get_address('billing')),
-                'placed_at' => gmdate('c', $order->get_date_created()->getTimestamp())
+                'placed_at' => $order->get_date_created()->format('c')
             ),
             'items' => $items
         );
-
-        // Add gateway fee if configured
-        $gateway_fees = get_option('ohs_gateway_fees', array());
-        $payment_method = $order->get_payment_method();
-        if (isset($gateway_fees[$payment_method])) {
-            $order_data['gateway_fee_percent'] = $gateway_fees[$payment_method];
-        }
-
-        // Build signature
-        $signature_base = $this->api_key . '|' . $order_data['timestamp'] . '|' . $order_data['nonce'] . '|' . $order_data['order']['wc_order_id'] . '|' . $order_data['order']['order_total'];
-        $order_data['signature'] = $this->compute_signature($signature_base, $this->api_secret);
-
-        return $order_data;
+        
+        return $payload;
     }
-
+    
     /**
-     * Format address for JSON
+     * Format address for API
      */
-    private function format_address($address)
-    {
+    private function format_address($address) {
         if (empty($address)) {
             return null;
         }
-
+        
         return array(
             'first_name' => $address['first_name'] ?? '',
             'last_name' => $address['last_name'] ?? '',
@@ -195,109 +256,110 @@ class OHS_Client
             'country' => $address['country'] ?? ''
         );
     }
-
+    
     /**
-     * Compute HMAC signature
+     * Get full API URL
      */
-    private function compute_signature($data, $secret)
-    {
-        return base64_encode(hash_hmac('sha256', $data, $secret, true));
+    private function get_api_url($endpoint) {
+        return trailingslashit($this->hub_url) . 'api/v1/' . $endpoint;
     }
-
-    /**
-     * Make HTTP request
-     */
-    private function make_request($url, $data)
-    {
-        $args = array(
-            'method' => 'POST',
-            'timeout' => 30,
-            'redirection' => 5,
-            'httpversion' => '1.1',
-            'blocking' => true,
-            'headers' => array(
-                'Content-Type' => 'application/json',
-                'User-Agent' => 'OrderHubSync/' . OHS_VERSION
-            ),
-            'body' => json_encode($data),
-            'cookies' => array()
-        );
-
-        $response = wp_remote_post($url, $args);
-
-        if (is_wp_error($response)) {
-            $this->log('Request error: ' . $response->get_error_message());
-            return false;
-        }
-
-        $status_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
-
-        if ($status_code !== 200) {
-            $this->log('Request failed with status ' . $status_code . ': ' . $body);
-            return false;
-        }
-
-        $result = json_decode($body, true);
-        if (!$result || !isset($result['ok']) || !$result['ok']) {
-            $this->log('Invalid response: ' . $body);
-            return false;
-        }
-
-        return true;
-    }
-
+    
     /**
      * Store failed order for retry
      */
-    private function store_failed_order($order_id, $payload)
-    {
-        $failed_orders = get_option('ohs_failed_orders', array());
-        $failed_orders[$order_id] = array(
-            'payload' => $payload,
-            'timestamp' => time(),
-            'retry_count' => 0
+    private function store_failed_order($order_id, $payload, $error_message) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'ohs_failed_orders';
+        
+        $wpdb->insert(
+            $table_name,
+            array(
+                'order_id' => $order_id,
+                'site_id' => get_current_blog_id(),
+                'payload' => json_encode($payload),
+                'error_message' => $error_message,
+                'retry_count' => 0,
+                'next_retry' => date('Y-m-d H:i:s', strtotime('+1 hour'))
+            ),
+            array('%d', '%d', '%s', '%s', '%d', '%s')
         );
-        update_option('ohs_failed_orders', $failed_orders);
     }
 
     /**
-     * Process failed orders
+     * Store order data locally for future processing
      */
-    public function process_failed_orders()
-    {
-        $failed_orders = get_option('ohs_failed_orders', array());
-        if (empty($failed_orders)) {
-            return;
+    private function store_order_locally($order_id, $payload) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'ohs_local_orders';
+        
+        // Create table if it doesn't exist
+        $this->create_local_orders_table();
+        
+        $wpdb->insert(
+            $table_name,
+            array(
+                'order_id' => $order_id,
+                'site_id' => get_current_blog_id(),
+                'payload' => json_encode($payload),
+                'created_at' => current_time('mysql')
+            ),
+            array('%d', '%d', '%s', '%s')
+        );
+        
+        if ($wpdb->last_error) {
+            $this->log("Failed to store order locally: " . $wpdb->last_error);
+        } else {
+            $this->log("Order {$order_id} stored locally successfully");
         }
-
-        $remaining = array();
-        foreach ($failed_orders as $order_id => $failed) {
-            if ($failed['retry_count'] >= 3) {
-                $this->log('Order ' . $order_id . ' failed permanently after 3 retries');
-                continue;
-            }
-
-            $failed['retry_count']++;
-            $endpoint = $this->hub_url . '/api/orders'; // Changed endpoint for retry
-
-            if ($this->make_request($endpoint, $failed['payload'])) {
-                $this->log('Failed order ' . $order_id . ' processed successfully on retry ' . $failed['retry_count']);
-            } else {
-                $remaining[$order_id] = $failed; // Keep original key
-            }
-        }
-
-        update_option('ohs_failed_orders', $remaining);
     }
-
+    
     /**
-     * Log message if debug is enabled
+     * Create local orders table if it doesn't exist
      */
-    private function log($message)
-    {
-        if (get_option('ohs_debug_log', false)) {
-            error_log('Order Hub Sync: ' . $message);
+    private function create_local_orders_table() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'ohs_local_orders';
+        
+        // Check if table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+        
+        if (!$table_exists) {
+            $charset_collate = $wpdb->get_charset_collate();
+            
+            $sql = "CREATE TABLE $table_name (
+                id mediumint(9) NOT NULL AUTO_INCREMENT,
+                order_id bigint(20) NOT NULL,
+                site_id bigint(20) NOT NULL,
+                payload longtext NOT NULL,
+                created_at datetime DEFAULT CURRENT_TIMESTAMP,
+                synced_at datetime NULL,
+                PRIMARY KEY (id),
+                KEY order_id (order_id),
+                KEY site_id (site_id),
+                KEY created_at (created_at)
+            ) $charset_collate;";
+            
+            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+            dbDelta($sql);
+            
+            $this->log("Local orders table created successfully");
+        }
+    }
+    
+    /**
+     * Log message if debug logging is enabled
+     */
+    private function log($message) {
+        if ($this->debug_log) {
+            // Use the new admin logging system
+            if (class_exists('OHS_Admin')) {
+                OHS_Admin::add_log('INFO', $message, 'client');
+            }
+            // Also log to WordPress debug log as backup
+            error_log('[Order Hub Sync] ' . $message);
         }
     }
 }

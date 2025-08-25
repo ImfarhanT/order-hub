@@ -59,11 +59,19 @@
                                 Sites
                             </a>
                         </li>
+
                         <li class="nav-item">
-                            <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Orders" ? "active" : "")" 
-                               asp-page="/Admin/Orders">
-                                <i class="bi bi-cart me-2"></i>
-                                Orders
+                            <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/OrdersV2" ? "active" : "")" 
+                               asp-page="/Admin/OrdersV2">
+                                <i class="bi bi-cart-check me-2"></i>
+                                Orders V2
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/RawData" ? "active" : "")" 
+                               asp-page="/Admin/RawData">
+                                <i class="bi bi-code-slash me-2"></i>
+                                Raw Data
                             </a>
                         </li>
                         <li class="nav-item">

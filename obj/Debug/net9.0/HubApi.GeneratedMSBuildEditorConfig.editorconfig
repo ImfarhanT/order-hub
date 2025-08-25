@@ -48,8 +48,16 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vT3JkZXJzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/farhan/Desktop/order-hub/Pages/Admin/OrdersV2.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vT3JkZXJzVjIuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/farhan/Desktop/order-hub/Pages/Admin/Partners.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vUGFydG5lcnMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/farhan/Desktop/order-hub/Pages/Admin/RawData.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWRtaW4vUmF3RGF0YS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/farhan/Desktop/order-hub/Pages/Admin/Reports.cshtml]

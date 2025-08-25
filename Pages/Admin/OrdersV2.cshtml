@@ -1,0 +1,283 @@
+@page
+@model HubApi.Pages.Admin.OrdersV2Model
+@{
+    ViewData["Title"] = "Orders V2";
+    ViewData["ActivePage"] = "OrdersV2";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-shopping-cart me-2"></i>Orders V2
+        </h1>
+        <div class="text-muted">
+            <small>Orders from new database schema</small>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Order List</h5>
+                <div class="d-flex gap-2">
+                    <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search orders..." style="width: 200px;">
+                    <select id="statusFilter" class="form-select form-select-sm" style="width: 150px;">
+                        <option value="">All Statuses</option>
+                        <option value="processing">Processing</option>
+                        <option value="completed">Completed</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="refunded">Refunded</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (!Model.Orders.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No orders found</h5>
+                    <p class="text-muted">Process some raw order data to see orders here.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover" id="ordersTable">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Site</th>
+                                <th>Customer</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Gateway</th>
+                                <th>Placed At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var order in Model.Orders)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@order.WcOrderId</strong>
+                                        <br>
+                                        <small class="text-muted">ID: @order.Id.ToString("N")[..8]...</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">@order.SiteName</span>
+                                    </td>
+                                    <td>
+                                        <div>@order.CustomerName</div>
+                                        <small class="text-muted">@order.CustomerEmail</small>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">@order.Currency @order.OrderTotal</div>
+                                        <small class="text-muted">Subtotal: @order.Currency @order.Subtotal</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@(GetStatusColor(order.Status))">@order.Status</span>
+                                    </td>
+                                    <td>
+                                        <small>@order.PaymentGatewayCode</small>
+                                    </td>
+                                    <td>
+                                        <div>@order.PlacedAt</div>
+                                        <small class="text-muted">Synced: @order.SyncedAt.ToString("yyyy-MM-dd HH:mm")</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary" 
+                                                    onclick="viewOrderDetails('@order.Id', '@order.WcOrderId')">
+                                                <i class="fas fa-eye"></i> View
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Orders pagination">
+                        <ul class="pagination justify-content-center">
+                            @if (Model.PageNumber > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=@(Model.PageNumber - 1)&pageSize=@Model.PageSize">Previous</a>
+                                </li>
+                            }
+
+                            @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
+                            {
+                                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                    <a class="page-link" href="?page=@i&pageSize=@Model.PageSize">@i</a>
+                                </li>
+                            }
+
+                            @if (Model.PageNumber < Model.TotalPages)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=@(Model.PageNumber + 1)&pageSize=@Model.PageSize">Next</a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="orderDetailsModalLabel">Order Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="orderDetailsContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Search and filter functionality
+        document.getElementById('searchInput').addEventListener('input', filterOrders);
+        document.getElementById('statusFilter').addEventListener('change', filterOrders);
+
+        function filterOrders() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value.toLowerCase();
+            const table = document.getElementById('ordersTable');
+            const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+            for (let row of rows) {
+                const orderId = row.cells[0].textContent.toLowerCase();
+                const customer = row.cells[2].textContent.toLowerCase();
+                const status = row.cells[4].textContent.toLowerCase();
+                
+                const matchesSearch = orderId.includes(searchTerm) || customer.includes(searchTerm);
+                const matchesStatus = !statusFilter || status.includes(statusFilter);
+                
+                row.style.display = matchesSearch && matchesStatus ? '' : 'none';
+            }
+        }
+
+        function viewOrderDetails(orderId, wcOrderId) {
+            // Fetch order details from API
+            fetch(`/api/v1/ordersv2/${orderId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('orderDetailsModalLabel').textContent = `Order ${wcOrderId} Details`;
+                    
+                    const content = document.getElementById('orderDetailsContent');
+                    content.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Order Information</h6>
+                                <table class="table table-sm">
+                                    <tr><td><strong>WC Order ID:</strong></td><td>${data.wcOrderId}</td></tr>
+                                    <tr><td><strong>Status:</strong></td><td><span class="badge bg-${getStatusColor(data.status)}">${data.status}</span></td></tr>
+                                    <tr><td><strong>Currency:</strong></td><td>${data.currency}</td></tr>
+                                    <tr><td><strong>Order Total:</strong></td><td>${data.currency} ${data.orderTotal}</td></tr>
+                                    <tr><td><strong>Subtotal:</strong></td><td>${data.currency} ${data.subtotal}</td></tr>
+                                    <tr><td><strong>Shipping:</strong></td><td>${data.currency} ${data.shippingTotal}</td></tr>
+                                    <tr><td><strong>Tax:</strong></td><td>${data.currency} ${data.taxTotal}</td></tr>
+                                    <tr><td><strong>Payment Gateway:</strong></td><td>${data.paymentGatewayCode}</td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Customer Information</h6>
+                                <table class="table table-sm">
+                                    <tr><td><strong>Name:</strong></td><td>${data.customerName}</td></tr>
+                                    <tr><td><strong>Email:</strong></td><td>${data.customerEmail}</td></tr>
+                                    <tr><td><strong>Phone:</strong></td><td>${data.customerPhone || 'N/A'}</td></tr>
+                                    <tr><td><strong>Placed At:</strong></td><td>${data.placedAt}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h6>Order Items</h6>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Product ID</th>
+                                            <th>SKU</th>
+                                            <th>Name</th>
+                                            <th>Qty</th>
+                                            <th>Price</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.orderItems.map(item => `
+                                            <tr>
+                                                <td>${item.productId}</td>
+                                                <td>${item.sku || 'N/A'}</td>
+                                                <td>${item.name}</td>
+                                                <td>${item.qty}</td>
+                                                <td>${data.currency} ${item.price}</td>
+                                                <td>${data.currency} ${item.total}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    
+                    new bootstrap.Modal(document.getElementById('orderDetailsModal')).show();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('orderDetailsContent').innerHTML = '<div class="alert alert-danger">Error loading order details</div>';
+                });
+        }
+
+        function getStatusColor(status) {
+            switch(status.toLowerCase()) {
+                case 'processing': return 'warning';
+                case 'completed': return 'success';
+                case 'shipped': return 'info';
+                case 'cancelled': return 'danger';
+                case 'refunded': return 'secondary';
+                default: return 'primary';
+            }
+        }
+    </script>
+}
+
+@functions {
+    private string GetStatusColor(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "processing" => "warning",
+            "completed" => "success",
+            "shipped" => "info",
+            "cancelled" => "danger",
+            "refunded" => "secondary",
+            _ => "primary"
+        };
+    }
+}

@@ -7,7 +7,7 @@ public class OrderSyncRequest
     public string SiteApiKey { get; set; } = string.Empty;
     public string Nonce { get; set; } = string.Empty;
     public long Timestamp { get; set; }
-    public string Signature { get; set; } = string.Empty;
+    public string? Signature { get; set; } // Optional now
     public OrderData Order { get; set; } = new();
     public List<OrderItemData> Items { get; set; } = new();
     public decimal? GatewayFeePercent { get; set; }
