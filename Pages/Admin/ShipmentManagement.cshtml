@@ -1,0 +1,1344 @@
+@page
+@model HubApi.Pages.Admin.ShipmentManagementModel
+@{
+    ViewData["Title"] = "Shipment Management";
+}
+
+<div class="container-fluid">
+    <!-- 🚚 SHIPMENT MANAGEMENT HEADER 🚚 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-shipping-fast me-2 text-primary"></i>
+                Shipment Management
+            </h1>
+            <p class="text-muted mb-0">Track orders, manage shipments, and print vendor details</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="refreshData()">
+                <i class="fas fa-sync-alt me-2"></i>Refresh
+            </button>
+            <button class="btn btn-success" onclick="exportShipments()">
+                <i class="fas fa-download me-2"></i>Export
+            </button>
+        </div>
+    </div>
+
+    <!-- 📊 SHIPMENT STATISTICS CARDS 📊 -->
+    <div class="row mb-4">
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 stat-card">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <div class="icon">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="totalShipments">0</div>
+                    <div class="stat-label">Total Shipments</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 stat-card">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <div class="icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="pendingShipments">0</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 stat-card">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <div class="icon">
+                            <i class="fas fa-shipping-fast"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="shippedShipments">0</div>
+                    <div class="stat-label">Shipped</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 stat-card">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <div class="icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="deliveredShipments">0</div>
+                    <div class="stat-label">Delivered</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 stat-card">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <div class="icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="exceptionShipments">0</div>
+                    <div class="stat-label">Exceptions</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 stat-card">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <div class="icon">
+                            <i class="fas fa-list-alt"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="pendingOrders">0</div>
+                    <div class="stat-label">Need Shipping</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🎯 MAIN CONTENT TABS 🎯 -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0 text-dark">
+                    <i class="fas fa-truck me-2 text-primary"></i>Shipment Management
+                </h4>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="refreshAllData()">
+                        <i class="fas fa-sync me-2"></i>Refresh All
+                    </button>
+                </div>
+            </div>
+            <ul class="nav nav-tabs card-header-tabs" id="shipmentTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="shipments-tab" data-bs-toggle="tab" data-bs-target="#shipments" type="button" role="tab">
+                        <i class="fas fa-shipping-fast me-2"></i>All Shipments
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="shipped-orders-tab" data-bs-toggle="tab" data-bs-target="#shipped-orders" type="button" role="tab">
+                        <i class="fas fa-box me-2"></i>All Shipped Orders
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                        <i class="fas fa-clock me-2"></i>Pending Orders
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tracking-tab" data-bs-toggle="tab" data-bs-target="#tracking" type="button" role="tab">
+                        <i class="fas fa-search me-2"></i>Track Shipments
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="tab-content" id="shipmentTabsContent">
+                <!-- 📦 ALL SHIPMENTS TAB 📦 -->
+                <div class="tab-pane fade show active" id="shipments" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h5 class="mb-1 text-dark">
+                                <i class="fas fa-shipping-fast me-2 text-primary"></i>All Shipments
+                            </h5>
+                            <p class="text-muted mb-0 small">Track and manage all shipment records</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm border-0 shadow-sm" id="statusFilter" onchange="filterShipments()">
+                                <option value="">All Statuses</option>
+                                <option value="pending">Pending</option>
+                                <option value="shipped">Shipped</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="exception">Exception</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover border-0" id="shipmentsTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="border-0 text-dark fw-semibold">Order #</th>
+                                    <th class="border-0 text-dark fw-semibold">Customer</th>
+                                    <th class="border-0 text-dark fw-semibold">Tracking #</th>
+                                    <th class="border-0 text-dark fw-semibold">Carrier</th>
+                                    <th class="border-0 text-dark fw-semibold">Status</th>
+                                    <th class="border-0 text-dark fw-semibold">Shipped Date</th>
+                                    <th class="border-0 text-dark fw-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shipmentsTableBody" class="border-0">
+                                <!-- Shipments will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 📦 ALL SHIPPED ORDERS TAB 📦 -->
+                <div class="tab-pane fade" id="shipped-orders" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h5 class="mb-1 text-dark">
+                                <i class="fas fa-box me-2 text-success"></i>All Shipped Orders
+                            </h5>
+                            <p class="text-muted mb-0 small">View all shipped orders and add tracking information</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-success btn-sm shadow-sm" onclick="refreshAllShippedOrders()">
+                                <i class="fas fa-sync me-2"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover border-0" id="shippedOrdersTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="border-0 text-dark fw-semibold">Order #</th>
+                                    <th class="border-0 text-dark fw-semibold">Customer</th>
+                                    <th class="border-0 text-dark fw-semibold">Items</th>
+                                    <th class="border-0 text-dark fw-semibold">Total</th>
+                                    <th class="border-0 text-dark fw-semibold">Order Date</th>
+                                    <th class="border-0 text-dark fw-semibold">Tracking Status</th>
+                                    <th class="border-0 text-dark fw-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shippedOrdersTableBody" class="border-0">
+                                <!-- Shipped orders will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ⏳ PENDING ORDERS TAB ⏳ -->
+                <div class="tab-pane fade" id="pending" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h5 class="mb-1 text-dark">
+                                <i class="fas fa-clock me-2 text-warning"></i>Orders Needing Shipping
+                            </h5>
+                            <p class="text-muted mb-0 small">Create shipments for orders that are ready to ship</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm shadow-sm" onclick="createBulkShipments()">
+                            <i class="fas fa-plus me-2"></i>Create Shipments
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover border-0" id="pendingTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="border-0 text-dark fw-semibold">
+                                        <input type="checkbox" id="selectAllPending" onchange="toggleSelectAll()" class="form-check-input">
+                                    </th>
+                                    <th class="border-0 text-dark fw-semibold">Order #</th>
+                                    <th class="border-0 text-dark fw-semibold">Customer</th>
+                                    <th class="border-0 text-dark fw-semibold">Items</th>
+                                    <th class="border-0 text-dark fw-semibold">Total</th>
+                                    <th class="border-0 text-dark fw-semibold">Order Date</th>
+                                    <th class="border-0 text-dark fw-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingTableBody" class="border-0">
+                                <!-- Pending orders will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 🔍 TRACKING TAB 🔍 -->
+                <div class="tab-pane fade" id="tracking" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h5 class="mb-1 text-dark">
+                                <i class="fas fa-search me-2 text-info"></i>Track Shipments
+                            </h5>
+                            <p class="text-muted mb-0 small">Search and track shipments by order number or tracking number</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-white border-0">
+                                    <h6 class="mb-0 text-dark">
+                                        <i class="fas fa-search me-2 text-primary"></i>Track by Order Number
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control border-0 shadow-sm" id="trackOrderNumber" placeholder="Enter Order Number">
+                                        <button class="btn btn-primary shadow-sm" type="button" onclick="trackOrder()">
+                                            <i class="fas fa-search me-2"></i>Track
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-white border-0">
+                                    <h6 class="mb-0 text-dark">
+                                        <i class="fas fa-truck me-2 text-success"></i>Track by Tracking Number
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control border-0 shadow-sm" id="trackTrackingNumber" placeholder="Enter Tracking Number">
+                                        <button class="btn btn-success shadow-sm" type="button" onclick="trackByNumber()">
+                                            <i class="fas fa-search me-2"></i>Track
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="trackingResults" class="mt-4">
+                        <!-- Tracking results will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🚚 CREATE SHIPMENT MODAL 🚚 -->
+<div class="modal fade" id="createShipmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>Create Shipment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createShipmentForm">
+                    <input type="hidden" id="modalOrderId">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Order Number</label>
+                            <input type="text" class="form-control" id="modalOrderNumber" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Customer Name</label>
+                            <input type="text" class="form-control" id="modalCustomerName" readonly>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tracking Number *</label>
+                            <input type="text" class="form-control" id="modalTrackingNumber" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Carrier *</label>
+                            <select class="form-select" id="modalCarrier" required>
+                                <option value="">Select Carrier</option>
+                                <option value="FedEx">FedEx</option>
+                                <option value="UPS">UPS</option>
+                                <option value="DHL">DHL</option>
+                                <option value="USPS">USPS</option>
+                                <option value="Amazon">Amazon</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tracking URL</label>
+                            <input type="url" class="form-control" id="modalTrackingUrl" placeholder="https://...">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Estimated Delivery</label>
+                            <input type="date" class="form-control" id="modalEstimatedDelivery">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" id="modalNotes" rows="3" placeholder="Any special instructions..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitShipment()">
+                    <i class="fas fa-save me-2"></i>Create Shipment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 📝 EDIT SHIPMENT MODAL 📝 -->
+<div class="modal fade" id="editShipmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Edit Shipment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editShipmentForm">
+                    <input type="hidden" id="editShipmentId">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Order Number</label>
+                            <input type="text" class="form-control" id="editOrderNumber" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status *</label>
+                            <select class="form-select" id="editStatus" required>
+                                <option value="pending">Pending</option>
+                                <option value="shipped">Shipped</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="exception">Exception</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tracking Number *</label>
+                            <input type="text" class="form-control" id="editTrackingNumber" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Carrier *</label>
+                            <select class="form-select" id="editCarrier" required>
+                                <option value="FedEx">FedEx</option>
+                                <option value="UPS">UPS</option>
+                                <option value="DHL">DHL</option>
+                                <option value="USPS">USPS</option>
+                                <option value="Amazon">Amazon</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tracking URL</label>
+                            <input type="url" class="form-control" id="editTrackingUrl" placeholder="https://...">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Estimated Delivery</label>
+                            <input type="date" class="form-control" id="editEstimatedDelivery">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" id="editNotes" rows="3" placeholder="Any special instructions..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateShipment()">
+                    <i class="fas fa-save me-2"></i>Update Shipment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🖨️ PRINT MODAL 🖨️ -->
+<div class="modal fade" id="printModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-print me-2"></i>Print Order Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="printContent">
+                    <!-- Print content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printOrder()">
+                    <i class="fas fa-print me-2"></i>Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🚚 ADD TRACKING TO SHIPPED ORDER MODAL 🚚 -->
+<div class="modal fade" id="addTrackingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-truck me-2"></i>Add Tracking to Shipped Order
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="addTrackingOrderId">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Order Number</label>
+                        <input type="text" class="form-control" id="addTrackingOrderNumber" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Customer Name</label>
+                        <input type="text" class="form-control" id="addTrackingCustomerName" readonly>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Tracking Number *</label>
+                        <input type="text" class="form-control" id="addTrackingTrackingNumber" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Carrier *</label>
+                        <select class="form-select" id="addTrackingCarrier" required>
+                            <option value="">Select Carrier</option>
+                            <option value="fedex">FedEx</option>
+                            <option value="ups">UPS</option>
+                            <option value="usps">USPS</option>
+                            <option value="dhl">DHL</option>
+                            <option value="amazon">Amazon Logistics</option>
+                            <option value="ontrac">OnTrac</option>
+                            <option value="lasership">LaserShip</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Tracking URL</label>
+                        <input type="url" class="form-control" id="addTrackingTrackingUrl" placeholder="https://...">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Estimated Delivery</label>
+                        <input type="date" class="form-control" id="addTrackingEstimatedDelivery">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" id="addTrackingNotes" rows="3" placeholder="Any special instructions..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveTrackingToOrder()">
+                    <i class="fas fa-save me-2"></i>Add Tracking
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        /* Enhanced styling for Shipment Management */
+        .nav-tabs .nav-link {
+            border: none;
+            border-radius: 0.5rem 0.5rem 0 0;
+            color: #6c757d;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: #495057;
+            background-color: #f8f9fa;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #0d6efd;
+            background-color: #fff;
+            border-bottom: 3px solid #0d6efd;
+            font-weight: 600;
+        }
+
+        .table th {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .btn-group-sm .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .form-select, .form-control {
+            border-radius: 0.5rem;
+        }
+
+        .card {
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.5rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .stat-card .icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        // 🚚 SHIPMENT MANAGEMENT JAVASCRIPT 🚚
+        let shipments = [];
+        let pendingOrders = [];
+        let currentShipmentId = null;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚚 Shipment Management Initializing...');
+            loadShipmentStatistics();
+            loadShipments();
+            loadPendingOrders();
+            loadAllShippedOrders();
+        });
+
+        // Load shipment statistics
+        async function loadShipmentStatistics() {
+            try {
+                const response = await fetch('/api/v1/shipments/statistics');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('totalShipments').textContent = data.data.totalShipments;
+                    document.getElementById('pendingShipments').textContent = data.data.pendingShipments;
+                    document.getElementById('shippedShipments').textContent = data.data.shippedShipments;
+                    document.getElementById('deliveredShipments').textContent = data.data.deliveredShipments;
+                    document.getElementById('exceptionShipments').textContent = data.data.exceptionShipments;
+                    document.getElementById('pendingOrders').textContent = data.data.pendingOrders;
+                }
+            } catch (error) {
+                console.error('Failed to load shipment statistics:', error);
+            }
+        }
+
+        // Load all shipments
+        async function loadShipments() {
+            try {
+                const response = await fetch('/api/v1/shipments');
+                const data = await response.json();
+                
+                if (data.success) {
+                    shipments = data.data;
+                    renderShipmentsTable();
+                }
+            } catch (error) {
+                console.error('Failed to load shipments:', error);
+            }
+        }
+
+        // Load all shipped orders
+        async function loadAllShippedOrders() {
+            try {
+                console.log('📦 Loading all shipped orders...');
+                const response = await fetch('/api/v1/shipments/all-shipped-orders');
+                console.log('📡 All Shipped Orders API Response:', response);
+                
+                const data = await response.json();
+                console.log('📊 All Shipped Orders API Data:', data);
+                
+                if (data.success) {
+                    window.allShippedOrders = data.data;
+                    console.log('📦 All Shipped Orders:', window.allShippedOrders);
+                    renderAllShippedOrdersTable();
+                } else {
+                    console.error('❌ All Shipped Orders API returned success: false:', data);
+                }
+            } catch (error) {
+                console.error('❌ Failed to load all shipped orders:', error);
+            }
+        }
+
+        // Load pending orders
+        async function loadPendingOrders() {
+            try {
+                console.log('🚚 Loading pending orders...');
+                const response = await fetch('/api/v1/shipments/pending-orders');
+                console.log('📡 API Response:', response);
+                
+                const data = await response.json();
+                console.log('📊 API Data:', data);
+                
+                if (data.success) {
+                    pendingOrders = data.data;
+                    console.log('📦 Pending Orders:', pendingOrders);
+                    renderPendingOrdersTable();
+                } else {
+                    console.error('❌ API returned success: false:', data);
+                }
+            } catch (error) {
+                console.error('❌ Failed to load pending orders:', error);
+            }
+        }
+
+        // Render all shipped orders table
+        function renderAllShippedOrdersTable() {
+            const tbody = document.getElementById('shippedOrdersTableBody');
+            tbody.innerHTML = '';
+
+            if (!window.allShippedOrders || window.allShippedOrders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No shipped orders found</td></tr>';
+                return;
+            }
+
+            window.allShippedOrders.forEach(order => {
+                const row = document.createElement('tr');
+                const itemsText = order.orderItems?.map(item => `${item.name} (${item.qty})`).join(', ') || 'No items';
+                
+                row.innerHTML = `
+                    <td><strong>${order.wcOrderId}</strong></td>
+                    <td>
+                        <div>
+                            <div class="fw-bold">${order.customerName}</div>
+                            <small class="text-muted">${order.customerEmail}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <small class="text-muted">${itemsText}</small>
+                    </td>
+                    <td><strong>$${parseFloat(order.orderTotal).toFixed(2)}</strong></td>
+                    <td>${new Date(order.syncedAt).toLocaleDateString()}</td>
+                    <td>
+                        ${order.hasTracking ? 
+                            `<span class="badge bg-success">Has Tracking</span>` : 
+                            `<span class="badge bg-warning">No Tracking</span>`
+                        }
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            ${order.hasTracking ? 
+                                `<button class="btn btn-outline-info" onclick="viewTracking('${order.shipmentId}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>` :
+                                `<button class="btn btn-outline-primary" onclick="addTrackingToOrder('${order.id}', '${order.wcOrderId}', '${order.customerName}')">
+                                    <i class="fas fa-plus"></i>
+                                </button>`
+                            }
+                            <button class="btn btn-outline-secondary" onclick="printOrderDetails('${order.id}')">
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Render shipments table
+        function renderShipmentsTable() {
+            const tbody = document.getElementById('shipmentsTableBody');
+            tbody.innerHTML = '';
+
+            shipments.forEach(shipment => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${shipment.orderNumber}</strong></td>
+                    <td>
+                        <div>
+                            <div class="fw-bold">${shipment.customerName}</div>
+                            <small class="text-muted">${shipment.customerEmail}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark">${shipment.trackingNumber}</span>
+                    </td>
+                    <td>${shipment.carrier}</td>
+                    <td>${getStatusBadge(shipment.status)}</td>
+                    <td>${shipment.shippedAt ? new Date(shipment.shippedAt).toLocaleDateString() : '-'}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="editShipment('${shipment.id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-info" onclick="printOrderDetails('${shipment.orderId}')">
+                                <i class="fas fa-print"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteShipment('${shipment.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Render pending orders table
+        function renderPendingOrdersTable() {
+            const tbody = document.getElementById('pendingTableBody');
+            tbody.innerHTML = '';
+
+            pendingOrders.forEach(order => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="checkbox" class="pending-checkbox" value="${order.id}"></td>
+                    <td><strong>${order.wcOrderId}</strong></td>
+                    <td>
+                        <div>
+                            <div class="fw-bold">${order.customerName}</div>
+                            <small class="text-muted">${order.customerEmail}</small>
+                        </div>
+                    </td>
+                    <td>${order.orderItems.length} items</td>
+                    <td>$${parseFloat(order.orderTotal).toFixed(2)}</td>
+                    <td>${new Date(order.syncedAt).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="createShipment('${order.id}')">
+                            <i class="fas fa-plus me-2"></i>Create Shipment
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Get status badge
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': '<span class="badge bg-warning">Pending</span>',
+                'shipped': '<span class="badge bg-info">Shipped</span>',
+                'delivered': '<span class="badge bg-success">Delivered</span>',
+                'exception': '<span class="badge bg-danger">Exception</span>'
+            };
+            return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+        }
+
+        // Create shipment
+        function createShipment(orderId) {
+            const order = pendingOrders.find(o => o.id === orderId);
+            if (!order) return;
+
+            document.getElementById('modalOrderId').value = order.id;
+            document.getElementById('modalOrderNumber').value = order.wcOrderId;
+            document.getElementById('modalCustomerName').value = order.customerName;
+            document.getElementById('modalTrackingNumber').value = '';
+            document.getElementById('modalCarrier').value = '';
+            document.getElementById('modalTrackingUrl').value = '';
+            document.getElementById('modalEstimatedDelivery').value = '';
+            document.getElementById('modalNotes').value = '';
+
+            new bootstrap.Modal(document.getElementById('createShipmentModal')).show();
+        }
+
+        // Submit shipment
+        async function submitShipment() {
+            const orderId = document.getElementById('modalOrderId').value;
+            const trackingNumber = document.getElementById('modalTrackingNumber').value;
+            const carrier = document.getElementById('modalCarrier').value;
+            const trackingUrl = document.getElementById('modalTrackingUrl').value;
+            const estimatedDelivery = document.getElementById('modalEstimatedDelivery').value;
+            const notes = document.getElementById('modalNotes').value;
+
+            if (!trackingNumber || !carrier) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/shipments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        trackingNumber: trackingNumber,
+                        carrier: carrier,
+                        trackingUrl: trackingUrl || null,
+                        estimatedDelivery: estimatedDelivery || null,
+                        notes: notes || null
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('createShipmentModal')).hide();
+                    loadShipmentStatistics();
+                    loadShipments();
+                    loadPendingOrders();
+                    showAlert('Shipment created successfully!', 'success');
+                } else {
+                    showAlert(data.message || 'Failed to create shipment', 'danger');
+                }
+            } catch (error) {
+                console.error('Failed to create shipment:', error);
+                showAlert('Failed to create shipment', 'danger');
+            }
+        }
+
+        // Edit shipment
+        function editShipment(shipmentId) {
+            const shipment = shipments.find(s => s.id === shipmentId);
+            if (!shipment) return;
+
+            currentShipmentId = shipmentId;
+            document.getElementById('editShipmentId').value = shipment.id;
+            document.getElementById('editOrderNumber').value = shipment.orderNumber;
+            document.getElementById('editStatus').value = shipment.status;
+            document.getElementById('editTrackingNumber').value = shipment.trackingNumber;
+            document.getElementById('editCarrier').value = shipment.carrier;
+            document.getElementById('editTrackingUrl').value = shipment.trackingUrl || '';
+            document.getElementById('editEstimatedDelivery').value = shipment.estimatedDelivery ? new Date(shipment.estimatedDelivery).toISOString().split('T')[0] : '';
+            document.getElementById('editNotes').value = shipment.notes || '';
+
+            new bootstrap.Modal(document.getElementById('editShipmentModal')).show();
+        }
+
+        // Update shipment
+        async function updateShipment() {
+            const status = document.getElementById('editStatus').value;
+            const trackingNumber = document.getElementById('editTrackingNumber').value;
+            const carrier = document.getElementById('editCarrier').value;
+            const trackingUrl = document.getElementById('editTrackingUrl').value;
+            const estimatedDelivery = document.getElementById('editEstimatedDelivery').value;
+            const notes = document.getElementById('editNotes').value;
+
+            if (!trackingNumber || !carrier || !status) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/shipments/${currentShipmentId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        trackingNumber: trackingNumber,
+                        carrier: carrier,
+                        status: status,
+                        trackingUrl: trackingUrl || null,
+                        estimatedDelivery: estimatedDelivery || null,
+                        notes: notes || null
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('editShipmentModal')).hide();
+                    loadShipmentStatistics();
+                    loadShipments();
+                    showAlert('Shipment updated successfully!', 'success');
+                } else {
+                    showAlert(data.message || 'Failed to update shipment', 'danger');
+                }
+            } catch (error) {
+                console.error('Failed to update shipment:', error);
+                showAlert('Failed to update shipment', 'danger');
+            }
+        }
+
+        // Delete shipment
+        async function deleteShipment(shipmentId) {
+            if (!confirm('Are you sure you want to delete this shipment?')) return;
+
+            try {
+                const response = await fetch(`/api/v1/shipments/${shipmentId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    loadShipmentStatistics();
+                    loadShipments();
+                    showAlert('Shipment deleted successfully!', 'success');
+                } else {
+                    showAlert(data.message || 'Failed to delete shipment', 'danger');
+                }
+            } catch (error) {
+                console.error('Failed to delete shipment:', error);
+                showAlert('Failed to delete shipment', 'danger');
+            }
+        }
+
+        // Print order details
+        function printOrderDetails(orderId) {
+            const shipment = shipments.find(s => s.orderId === orderId);
+            if (!shipment) return;
+
+            const printContent = `
+                <div class="print-header text-center mb-4">
+                    <h3>ORDER SHIPPING DETAILS</h3>
+                    <p class="text-muted">Vendor Copy</p>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Order Information</h6>
+                        <p><strong>Order #:</strong> ${shipment.orderNumber}</p>
+                        <p><strong>Order Date:</strong> ${new Date(shipment.createdAt).toLocaleDateString()}</p>
+                        <p><strong>Total:</strong> $${shipment.order?.orderTotal || 'N/A'}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Shipping Information</h6>
+                        <p><strong>Tracking #:</strong> ${shipment.trackingNumber}</p>
+                        <p><strong>Carrier:</strong> ${shipment.carrier}</p>
+                        <p><strong>Status:</strong> ${shipment.status}</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Customer Information</h6>
+                    <p><strong>Name:</strong> ${shipment.customerName}</p>
+                    <p><strong>Email:</strong> ${shipment.customerEmail}</p>
+                    <p><strong>Phone:</strong> ${shipment.customerPhone}</p>
+                    <p><strong>Address:</strong> ${shipment.shippingAddress}</p>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Order Items</h6>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${shipment.orderItems.map(item => `
+                                <tr>
+                                    <td>${item.name}</td>
+                                    <td>${item.qty}</td>
+                                    <td>$${parseFloat(item.total).toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Notes</h6>
+                    <p>${shipment.notes || 'No special instructions'}</p>
+                </div>
+            `;
+
+            document.getElementById('printContent').innerHTML = printContent;
+            new bootstrap.Modal(document.getElementById('printModal')).show();
+        }
+
+        // Print order
+        function printOrder() {
+            const printContent = document.getElementById('printContent');
+            const originalContents = document.body.innerHTML;
+            
+            document.body.innerHTML = printContent.innerHTML;
+            window.print();
+            document.body.innerHTML = originalContents;
+            
+            // Reinitialize the page after printing
+            location.reload();
+        }
+
+        // Track order
+        async function trackOrder() {
+            const orderNumber = document.getElementById('trackOrderNumber').value;
+            if (!orderNumber) {
+                alert('Please enter an order number');
+                return;
+            }
+
+            const shipment = shipments.find(s => s.orderNumber === orderNumber);
+            if (shipment) {
+                displayTrackingResults(shipment);
+            } else {
+                showAlert('Order not found or no shipment created', 'warning');
+            }
+        }
+
+        // Track by tracking number
+        async function trackByNumber() {
+            const trackingNumber = document.getElementById('trackTrackingNumber').value;
+            if (!trackingNumber) {
+                alert('Please enter a tracking number');
+                return;
+            }
+
+            const shipment = shipments.find(s => s.trackingNumber === trackingNumber);
+            if (shipment) {
+                displayTrackingResults(shipment);
+            } else {
+                showAlert('Tracking number not found', 'warning');
+            }
+        }
+
+        // Display tracking results
+        function displayTrackingResults(shipment) {
+            const resultsDiv = document.getElementById('trackingResults');
+            resultsDiv.innerHTML = `
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-truck me-2"></i>Tracking Results
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Order #:</strong> ${shipment.orderNumber}</p>
+                                <p><strong>Customer:</strong> ${shipment.customerName}</p>
+                                <p><strong>Tracking #:</strong> ${shipment.trackingNumber}</p>
+                                <p><strong>Carrier:</strong> ${shipment.carrier}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Status:</strong> ${getStatusBadge(shipment.status)}</p>
+                                <p><strong>Shipped:</strong> ${shipment.shippedAt ? new Date(shipment.shippedAt).toLocaleDateString() : 'Not shipped yet'}</p>
+                                <p><strong>Estimated Delivery:</strong> ${shipment.estimatedDelivery ? new Date(shipment.estimatedDelivery).toLocaleDateString() : 'Not set'}</p>
+                                <p><strong>Delivered:</strong> ${shipment.deliveredAt ? new Date(shipment.deliveredAt).toLocaleDateString() : 'Not delivered yet'}</p>
+                            </div>
+                        </div>
+                        ${shipment.trackingUrl ? `<p><strong>Tracking URL:</strong> <a href="${shipment.trackingUrl}" target="_blank">${shipment.trackingUrl}</a></p>` : ''}
+                        ${shipment.notes ? `<p><strong>Notes:</strong> ${shipment.notes}</p>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Filter shipments by status
+        function filterShipments() {
+            const status = document.getElementById('statusFilter').value;
+            if (!status) {
+                renderShipmentsTable();
+                return;
+            }
+
+            const filteredShipments = shipments.filter(s => s.status.toLowerCase() === status.toLowerCase());
+            renderFilteredShipments(filteredShipments);
+        }
+
+        // Render filtered shipments
+        function renderFilteredShipments(filteredShipments) {
+            const tbody = document.getElementById('shipmentsTableBody');
+            tbody.innerHTML = '';
+
+            filteredShipments.forEach(shipment => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${shipment.orderNumber}</strong></td>
+                    <td>
+                        <div>
+                            <div class="fw-bold">${shipment.customerName}</div>
+                            <small class="text-muted">${shipment.customerEmail}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark">${shipment.trackingNumber}</span>
+                    </td>
+                    <td>${shipment.carrier}</td>
+                    <td>${getStatusBadge(shipment.status)}</td>
+                    <td>${shipment.shippedAt ? new Date(shipment.shippedAt).toLocaleDateString() : '-'}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="editShipment('${shipment.id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-info" onclick="printOrderDetails('${shipment.orderId}')">
+                                <i class="fas fa-print"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteShipment('${shipment.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Toggle select all pending orders
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAllPending');
+            const checkboxes = document.querySelectorAll('.pending-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        }
+
+        // Add tracking to shipped order
+        function addTrackingToOrder(orderId, orderNumber, customerName) {
+            document.getElementById('addTrackingOrderId').value = orderId;
+            document.getElementById('addTrackingOrderNumber').value = orderNumber;
+            document.getElementById('addTrackingCustomerName').value = customerName;
+            document.getElementById('addTrackingTrackingNumber').value = '';
+            document.getElementById('addTrackingCarrier').value = '';
+            document.getElementById('addTrackingTrackingUrl').value = '';
+            document.getElementById('addTrackingEstimatedDelivery').value = '';
+            document.getElementById('addTrackingNotes').value = '';
+            
+            new bootstrap.Modal(document.getElementById('addTrackingModal')).show();
+        }
+
+        // Save tracking to shipped order
+        async function saveTrackingToOrder() {
+            const orderId = document.getElementById('addTrackingOrderId').value;
+            const trackingNumber = document.getElementById('addTrackingTrackingNumber').value;
+            const carrier = document.getElementById('addTrackingCarrier').value;
+            const trackingUrl = document.getElementById('addTrackingTrackingUrl').value;
+            const estimatedDelivery = document.getElementById('addTrackingEstimatedDelivery').value;
+            const notes = document.getElementById('addTrackingNotes').value;
+
+            if (!trackingNumber || !carrier) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/shipments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        trackingNumber: trackingNumber,
+                        carrier: carrier,
+                        trackingUrl: trackingUrl || null,
+                        estimatedDelivery: estimatedDelivery || null,
+                        notes: notes || null
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Tracking added successfully!', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('addTrackingModal')).hide();
+                    
+                    // Refresh data
+                    loadShipments();
+                    loadAllShippedOrders();
+                    loadShipmentStatistics();
+                } else {
+                    showAlert(`Failed to add tracking: ${data.message}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Error adding tracking:', error);
+                showAlert('Error adding tracking. Please try again.', 'danger');
+            }
+        }
+
+        // Refresh all shipped orders
+        function refreshAllShippedOrders() {
+            loadAllShippedOrders();
+        }
+
+        // Refresh all data
+        function refreshAllData() {
+            loadShipmentStatistics();
+            loadShipments();
+            loadPendingOrders();
+            loadAllShippedOrders();
+            showAlert('All data refreshed successfully!', 'success');
+        }
+
+        // View tracking for existing shipment
+        function viewTracking(shipmentId) {
+            // For now, just show a message - you can implement detailed tracking view
+            showAlert('Tracking details view is not yet implemented. This will show live tracking data.', 'info');
+        }
+
+        // Create bulk shipments
+        async function createBulkShipments() {
+            const selectedOrders = Array.from(document.querySelectorAll('.pending-checkbox:checked')).map(cb => cb.value);
+            if (selectedOrders.length === 0) {
+                alert('Please select orders to create shipments');
+                return;
+            }
+
+            if (!confirm(`Create shipments for ${selectedOrders.length} orders?`)) return;
+
+            // For now, just show a message - you can implement bulk creation logic
+            showAlert(`Bulk shipment creation for ${selectedOrders.length} orders is not yet implemented. Please create shipments individually.`, 'info');
+        }
+
+        // Export shipments
+        function exportShipments() {
+            // Implement export functionality
+            showAlert('Export functionality is not yet implemented', 'info');
+        }
+
+        // Refresh data
+        function refreshData() {
+            loadShipmentStatistics();
+            loadShipments();
+            loadPendingOrders();
+            showAlert('Data refreshed successfully!', 'success');
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+    </script>
+}

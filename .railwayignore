@@ -1,0 +1,10 @@
+bin/
+obj/
+logs/
+*.log
+.git/
+node_modules/
+.env
+.env.local
+.env.production
+

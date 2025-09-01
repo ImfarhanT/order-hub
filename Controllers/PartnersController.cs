@@ -16,10 +16,12 @@ namespace HubApi.Controllers;
 public class PartnersController : ControllerBase
 {
     private readonly OrderHubDbContext _context;
+    private readonly ILogger<PartnersController> _logger;
 
-    public PartnersController(OrderHubDbContext context)
+    public PartnersController(OrderHubDbContext context, ILogger<PartnersController> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     // GET: api/partners
@@ -47,8 +49,10 @@ public class PartnersController : ControllerBase
 
     // POST: api/partners
     [HttpPost]
-    public async Task<ActionResult<Partner>> CreatePartner(Partner partner)
+    public async Task<ActionResult<Partner>> CreatePartner([FromBody] Partner partner)
     {
+        _logger.LogInformation("Creating partner: {PartnerName}, Email: {Email}", partner.Name, partner.Email);
+        
         if (ModelState.IsValid)
         {
             partner.Id = Guid.NewGuid();
@@ -58,15 +62,17 @@ public class PartnersController : ControllerBase
             _context.Partners.Add(partner);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation("Partner created successfully with ID: {PartnerId}", partner.Id);
             return CreatedAtAction(nameof(GetPartner), new { id = partner.Id }, partner);
         }
 
+        _logger.LogWarning("Model state invalid: {Errors}", string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
         return BadRequest(ModelState);
     }
 
     // PUT: api/partners/5
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdatePartner(Guid id, Partner partner)
+    public async Task<IActionResult> UpdatePartner(Guid id, [FromBody] Partner partner)
     {
         if (id != partner.Id)
         {

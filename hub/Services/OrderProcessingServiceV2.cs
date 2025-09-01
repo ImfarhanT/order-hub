@@ -92,18 +92,44 @@ public class OrderProcessingServiceV2 : IOrderProcessingService
         {
             _logger.LogInformation("Creating new order for site {SiteId} from raw data {RawOrderId}", siteId, rawOrderDataId);
             
+            // Get currency and convert GBP to USD if needed
+            var currency = GetStringProperty(orderProp, "currency");
+            var orderTotal = GetStringProperty(orderProp, "order_total");
+            var subtotal = GetStringProperty(orderProp, "subtotal");
+            var discountTotal = GetStringProperty(orderProp, "discount_total");
+            var shippingTotal = GetStringProperty(orderProp, "shipping_total");
+            var taxTotal = GetStringProperty(orderProp, "tax_total");
+
+            // Convert GBP to USD if needed (1 GBP = 1.37 USD)
+            if (currency.ToUpper() == "GBP")
+            {
+                if (decimal.TryParse(orderTotal, out var total))
+                    orderTotal = (total * 1.37m).ToString("F2");
+                if (decimal.TryParse(subtotal, out var sub))
+                    subtotal = (sub * 1.37m).ToString("F2");
+                if (decimal.TryParse(discountTotal, out var discount))
+                    discountTotal = (discount * 1.37m).ToString("F2");
+                if (decimal.TryParse(shippingTotal, out var shipping))
+                    shippingTotal = (shipping * 1.37m).ToString("F2");
+                if (decimal.TryParse(taxTotal, out var tax))
+                    taxTotal = (tax * 1.37m).ToString("F2");
+                
+                currency = "USD"; // Change currency to USD after conversion
+                _logger.LogInformation("Converted GBP amounts to USD using 1.37 conversion rate");
+            }
+
             var order = new OrderV2
             {
                 Id = Guid.NewGuid(),
                 SiteId = siteId,
                 WcOrderId = GetStringProperty(orderProp, "wc_order_id"),
                 Status = GetStringProperty(orderProp, "status"),
-                Currency = GetStringProperty(orderProp, "currency"),
-                OrderTotal = GetStringProperty(orderProp, "order_total"),
-                Subtotal = GetStringProperty(orderProp, "subtotal"),
-                DiscountTotal = GetStringProperty(orderProp, "discount_total"),
-                ShippingTotal = GetStringProperty(orderProp, "shipping_total"),
-                TaxTotal = GetStringProperty(orderProp, "tax_total"),
+                Currency = currency,
+                OrderTotal = orderTotal,
+                Subtotal = subtotal,
+                DiscountTotal = discountTotal,
+                ShippingTotal = shippingTotal,
+                TaxTotal = taxTotal,
                 PaymentGatewayCode = GetStringProperty(orderProp, "payment_gateway_code"),
                 CustomerName = GetStringProperty(orderProp, "customer_name"),
                 CustomerEmail = GetStringProperty(orderProp, "customer_email"),
@@ -121,6 +147,9 @@ public class OrderProcessingServiceV2 : IOrderProcessingService
 
             // Process order items
             await ProcessOrderItemsAsync(order, rawOrderDataId);
+
+            // Calculate and create partner earnings
+            await CalculatePartnerEarningsAsync(order.Id, siteId);
 
             // Mark raw data as processed
             await MarkRawDataAsProcessedAsync(rawOrderDataId);
@@ -148,13 +177,40 @@ public class OrderProcessingServiceV2 : IOrderProcessingService
     {
         try
         {
+            // Get currency and convert GBP to USD if needed
+            var currency = GetStringProperty(orderProp, "currency");
+            var orderTotal = GetStringProperty(orderProp, "order_total");
+            var subtotal = GetStringProperty(orderProp, "subtotal");
+            var discountTotal = GetStringProperty(orderProp, "discount_total");
+            var shippingTotal = GetStringProperty(orderProp, "shipping_total");
+            var taxTotal = GetStringProperty(orderProp, "tax_total");
+
+            // Convert GBP to USD if needed (1 GBP = 1.37 USD)
+            if (currency.ToUpper() == "GBP")
+            {
+                if (decimal.TryParse(orderTotal, out var total))
+                    orderTotal = (total * 1.37m).ToString("F2");
+                if (decimal.TryParse(subtotal, out var sub))
+                    subtotal = (sub * 1.37m).ToString("F2");
+                if (decimal.TryParse(discountTotal, out var discount))
+                    discountTotal = (discount * 1.37m).ToString("F2");
+                if (decimal.TryParse(shippingTotal, out var shipping))
+                    shippingTotal = (shipping * 1.37m).ToString("F2");
+                if (decimal.TryParse(taxTotal, out var tax))
+                    taxTotal = (tax * 1.37m).ToString("F2");
+                
+                currency = "USD"; // Change currency to USD after conversion
+                _logger.LogInformation("Converted GBP amounts to USD using 1.37 conversion rate");
+            }
+
             // Update order properties
             existingOrder.Status = GetStringProperty(orderProp, "status");
-            existingOrder.OrderTotal = GetStringProperty(orderProp, "order_total");
-            existingOrder.Subtotal = GetStringProperty(orderProp, "subtotal");
-            existingOrder.DiscountTotal = GetStringProperty(orderProp, "discount_total");
-            existingOrder.ShippingTotal = GetStringProperty(orderProp, "shipping_total");
-            existingOrder.TaxTotal = GetStringProperty(orderProp, "tax_total");
+            existingOrder.Currency = currency;
+            existingOrder.OrderTotal = orderTotal;
+            existingOrder.Subtotal = subtotal;
+            existingOrder.DiscountTotal = discountTotal;
+            existingOrder.ShippingTotal = shippingTotal;
+            existingOrder.TaxTotal = taxTotal;
             existingOrder.PaymentGatewayCode = GetStringProperty(orderProp, "payment_gateway_code");
             existingOrder.CustomerName = GetStringProperty(orderProp, "customer_name");
             existingOrder.CustomerEmail = GetStringProperty(orderProp, "customer_email");
@@ -172,6 +228,9 @@ public class OrderProcessingServiceV2 : IOrderProcessingService
 
             // Process order items
             await ProcessOrderItemsAsync(existingOrder, rawOrderDataId);
+
+            // Calculate and create partner earnings
+            await CalculatePartnerEarningsAsync(existingOrder.Id, existingOrder.SiteId);
 
             // Mark raw data as processed
             await MarkRawDataAsProcessedAsync(rawOrderDataId);
@@ -210,10 +269,10 @@ public class OrderProcessingServiceV2 : IOrderProcessingService
                 
                 foreach (var itemElement in itemsProp.EnumerateArray())
                 {
-                    var productId = GetStringProperty(itemElement, "product_id");
-                    var name = GetStringProperty(itemElement, "name");
-                    var qty = GetStringProperty(itemElement, "qty");
-                    var price = GetStringProperty(itemElement, "price");
+                    var productId = GetStringProperty(itemElement, "ProductId");
+                    var name = GetStringProperty(itemElement, "Name");
+                    var qty = GetStringProperty(itemElement, "Qty");
+                    var price = GetStringProperty(itemElement, "Price");
                     
                     _logger.LogInformation("Processing item: ProductId={ProductId}, Name={Name}, Qty={Qty}, Price={Price}", 
                         productId, name, qty, price);
@@ -223,12 +282,12 @@ public class OrderProcessingServiceV2 : IOrderProcessingService
                         Id = Guid.NewGuid(),
                         OrderId = order.Id,
                         ProductId = productId,
-                        Sku = GetStringProperty(itemElement, "sku"),
+                        Sku = GetStringProperty(itemElement, "Sku"),
                         Name = name,
                         Qty = qty,
                         Price = price,
-                        Subtotal = GetStringProperty(itemElement, "subtotal"),
-                        Total = GetStringProperty(itemElement, "total")
+                        Subtotal = GetStringProperty(itemElement, "Subtotal"),
+                        Total = GetStringProperty(itemElement, "Total")
                     };
 
                     _context.OrderItemsV2.Add(orderItem);
@@ -310,5 +369,114 @@ public class OrderProcessingServiceV2 : IOrderProcessingService
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Calculate and create partner earnings for an order
+    /// </summary>
+    private async Task CalculatePartnerEarningsAsync(Guid orderId, Guid siteId)
+    {
+        try
+        {
+            // Get the order to calculate earnings
+            var order = await _context.OrdersV2
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (order == null)
+            {
+                _logger.LogWarning("Order not found for partner earnings calculation: {OrderId}", orderId);
+                return;
+            }
+
+            // Get active site-partner assignments for this site
+            var sitePartners = await _context.SitePartners
+                .Include(sp => sp.Partner)
+                .Where(sp => sp.SiteId == siteId && sp.IsActive)
+                .ToListAsync();
+
+            if (!sitePartners.Any())
+            {
+                _logger.LogInformation("No active partner assignments found for site {SiteId}", siteId);
+                return;
+            }
+
+            // Parse order total for calculations
+            if (!decimal.TryParse(order.OrderTotal, out var orderTotal))
+            {
+                _logger.LogWarning("Could not parse order total for partner earnings: {OrderTotal}", order.OrderTotal);
+                return;
+            }
+
+            foreach (var sitePartner in sitePartners)
+            {
+                try
+                {
+                    // Calculate share amount based on share type and percentage
+                    decimal shareAmount = 0;
+                    
+                    if (sitePartner.ShareType == "Revenue")
+                    {
+                        // Revenue share: percentage of total order value
+                        shareAmount = orderTotal * (sitePartner.SharePercentage / 100m);
+                    }
+                    else if (sitePartner.ShareType == "Profit")
+                    {
+                        // Profit share: percentage of profit (order total - costs)
+                        // For now, we'll use a simplified calculation
+                        // You can enhance this to include actual cost calculations
+                        var estimatedCosts = orderTotal * 0.7m; // Assume 70% costs, 30% profit
+                        var profit = orderTotal - estimatedCosts;
+                        shareAmount = profit * (sitePartner.SharePercentage / 100m);
+                    }
+
+                    // Check if partner order already exists
+                    var existingPartnerOrder = await _context.PartnerOrders
+                        .FirstOrDefaultAsync(po => po.OrderId == orderId && po.PartnerId == sitePartner.PartnerId);
+
+                    if (existingPartnerOrder != null)
+                    {
+                        // Update existing partner order
+                        existingPartnerOrder.ShareAmount = shareAmount;
+                        existingPartnerOrder.ShareType = sitePartner.ShareType;
+                        existingPartnerOrder.SharePercentage = sitePartner.SharePercentage;
+                        existingPartnerOrder.UpdatedAt = DateTime.UtcNow;
+                        
+                        _logger.LogInformation("Updated partner order: Partner {PartnerId}, Amount: {ShareAmount}", 
+                            sitePartner.PartnerId, shareAmount);
+                    }
+                    else
+                    {
+                        // Create new partner order
+                        var partnerOrder = new PartnerOrder
+                        {
+                            Id = Guid.NewGuid(),
+                            PartnerId = sitePartner.PartnerId,
+                            OrderId = orderId,
+                            OrderTotal = orderTotal,
+                            ShareAmount = shareAmount,
+                            ShareType = sitePartner.ShareType,
+                            SharePercentage = sitePartner.SharePercentage,
+                            IsPaid = false,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+
+                        _context.PartnerOrders.Add(partnerOrder);
+                        
+                        _logger.LogInformation("Created partner order: Partner {PartnerId}, Amount: {ShareAmount}", 
+                            sitePartner.PartnerId, shareAmount);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error calculating earnings for partner {PartnerId} on order {OrderId}", 
+                        sitePartner.PartnerId, orderId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calculating partner earnings for order {OrderId}", orderId);
+        }
     }
 }

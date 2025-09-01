@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using HubApi.Data;
 using HubApi.Models;
+using System;
 
 namespace HubApi.Pages.Admin
 {
@@ -22,11 +23,15 @@ namespace HubApi.Pages.Admin
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 20;
         public int TotalPages { get; set; }
+        public bool HasMoreRawData => RawOrders.Count < TotalCount;
+        public int CurrentPage => PageNumber;
 
         public async Task OnGetAsync(int page = 1, int pageSize = 20)
         {
             PageNumber = page;
             PageSize = Math.Max(1, Math.Min(100, pageSize)); // Limit page size between 1 and 100
+            
+            _logger.LogInformation("RawData OnGetAsync called with page={PageNumber}, pageSize={PageSize}", PageNumber, PageSize);
 
             var query = _context.RawOrderData
                 .Include(r => r.Site)

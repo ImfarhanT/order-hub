@@ -28,6 +28,12 @@ builder.Services.AddScoped<IHmacService, HmacService>();
 builder.Services.AddScoped<ICryptoService, CryptoService>();
 builder.Services.AddScoped<IOrderProcessingService, OrderProcessingServiceV2>();
 builder.Services.AddScoped<OrderProcessingServiceV2>();
+builder.Services.AddScoped<IGatewayPartnerRevenueService, GatewayPartnerRevenueService>();
+builder.Services.AddScoped<IPdfReportService, PdfReportService>();
+
+// Add tracking services
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ITrackingService, AfterShipTrackingService>();
 
 // Add Swagger
 builder.Services.AddEndpointsApiExplorer();

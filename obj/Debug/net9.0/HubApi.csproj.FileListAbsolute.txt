@@ -138,3 +138,10 @@
 /Users/farhan/Desktop/order-hub/obj/Debug/net9.0/ref/HubApi.dll
 /Users/farhan/Desktop/order-hub/obj/Debug/net9.0/HubApi.RazorAssemblyInfo.cache
 /Users/farhan/Desktop/order-hub/obj/Debug/net9.0/HubApi.RazorAssemblyInfo.cs
+/Users/farhan/Desktop/order-hub/bin/Debug/net9.0/BouncyCastle.Cryptography.dll
+/Users/farhan/Desktop/order-hub/bin/Debug/net9.0/iTextSharp.LGPLv2.Core.dll
+/Users/farhan/Desktop/order-hub/bin/Debug/net9.0/SkiaSharp.dll
+/Users/farhan/Desktop/order-hub/bin/Debug/net9.0/runtimes/osx/native/libSkiaSharp.dylib
+/Users/farhan/Desktop/order-hub/bin/Debug/net9.0/runtimes/win-arm64/native/libSkiaSharp.dll
+/Users/farhan/Desktop/order-hub/bin/Debug/net9.0/runtimes/win-x64/native/libSkiaSharp.dll
+/Users/farhan/Desktop/order-hub/bin/Debug/net9.0/runtimes/win-x86/native/libSkiaSharp.dll

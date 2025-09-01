@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HubApi.Data;
 using HubApi.Models;
+using HubApi.DTOs;
 
 namespace HubApi.Controllers;
 
@@ -120,6 +121,41 @@ public class OrdersV2Controller : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting orders");
+            return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+        }
+    }
+
+    // PUT: api/v1/ordersv2/{id}/gateway
+    [HttpPut("{id:guid}/gateway")]
+    public async Task<IActionResult> UpdateOrderGateway(Guid id, [FromBody] UpdateOrderGatewayRequest request)
+    {
+        try
+        {
+            var order = await _context.OrdersV2.FindAsync(id);
+            if (order == null)
+            {
+                return NotFound(new { error = "Order not found" });
+            }
+
+            // Validate the payment gateway code
+            if (string.IsNullOrWhiteSpace(request.PaymentGatewayCode))
+            {
+                return BadRequest(new { error = "Payment gateway code is required" });
+            }
+
+            // Update the payment gateway
+            order.PaymentGatewayCode = request.PaymentGatewayCode;
+            order.SyncedAt = DateTime.UtcNow; // Update sync time to reflect the change
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Updated payment gateway for order {OrderId} to {GatewayCode}", id, request.PaymentGatewayCode);
+
+            return Ok(new { message = "Payment gateway updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating payment gateway for order {OrderId}", id);
             return StatusCode(500, new { error = "Internal server error", details = ex.Message });
         }
     }

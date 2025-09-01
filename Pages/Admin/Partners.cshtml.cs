@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using HubApi.Data;
 using HubApi.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -25,9 +26,18 @@ public class PartnersModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        Partners = await _context.Partners
-            .OrderBy(p => p.Name)
-            .ToListAsync();
+        try
+        {
+            Partners = await _context.Partners
+                .OrderBy(p => p.Name)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            // Log the error and set empty list
+            Partners = new List<Partner>();
+            // You can add logging here if needed
+        }
         
         return Page();
     }

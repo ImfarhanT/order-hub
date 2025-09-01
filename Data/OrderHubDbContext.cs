@@ -22,7 +22,12 @@ public class OrderHubDbContext : DbContext
     public DbSet<PartnerOrder> PartnerOrders { get; set; }
     public DbSet<RawOrderData> RawOrderData { get; set; }
     public DbSet<OrderV2> OrdersV2 { get; set; }
-    public DbSet<OrderItemV2> OrderItemsV2 { get; set; }
+            public DbSet<OrderItemV2> OrderItemsV2 { get; set; }
+        public DbSet<OrderProfit> OrderProfits { get; set; }
+        public DbSet<PaymentGatewayDetails> PaymentGatewayDetails { get; set; }
+        public DbSet<GatewayPartner> GatewayPartners { get; set; }
+        public DbSet<GatewayPartnerAssignment> GatewayPartnerAssignments { get; set; }
+        public DbSet<Shipment> Shipments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -172,5 +177,97 @@ public class OrderHubDbContext : DbContext
 
         modelBuilder.Entity<OrderItemV2>()
             .HasIndex(oi => oi.ProductId);
+
+        // Configure GatewayPartner relationships
+        modelBuilder.Entity<GatewayPartner>()
+            .HasIndex(gp => gp.PartnerCode)
+            .IsUnique();
+
+        modelBuilder.Entity<GatewayPartnerAssignment>()
+            .HasOne(ga => ga.GatewayPartner)
+            .WithMany(gp => gp.GatewayAssignments)
+            .HasForeignKey(ga => ga.GatewayPartnerId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<GatewayPartnerAssignment>()
+            .HasOne(ga => ga.PaymentGateway)
+            .WithMany()
+            .HasForeignKey(ga => ga.PaymentGatewayId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Configure indexes for GatewayPartnerAssignment
+        modelBuilder.Entity<GatewayPartnerAssignment>()
+            .HasIndex(ga => new { ga.GatewayPartnerId, ga.PaymentGatewayId })
+            .IsUnique();
+
+        // Configure Shipment relationships
+        modelBuilder.Entity<Shipment>()
+            .ToTable("shipments") // Explicitly set table name to lowercase
+            .Property(s => s.Id)
+            .HasColumnName("id");
+            
+        modelBuilder.Entity<Shipment>()
+            .Property(s => s.OrderId)
+            .HasColumnName("order_id");
+            
+        modelBuilder.Entity<Shipment>()
+            .Property(s => s.TrackingNumber)
+            .HasColumnName("tracking_number");
+            
+        modelBuilder.Entity<Shipment>()
+            .Property(s => s.Carrier)
+            .HasColumnName("carrier");
+            
+        modelBuilder.Entity<Shipment>()
+            .Property(s => s.Status)
+            .HasColumnName("status");
+            
+        modelBuilder.Entity<Shipment>()
+            .Property(s => s.TrackingUrl)
+            .HasColumnName("tracking_url");
+            
+        modelBuilder.Entity<Shipment>()
+            .Property(s => s.ShippedAt)
+            .HasColumnName("shipped_at");
+            
+        modelBuilder.Entity<Shipment>()
+            .Property(s => s.EstimatedDelivery)
+            .HasColumnName("estimated_delivery");
+            
+        modelBuilder.Entity<Shipment>()
+            .Property(s => s.DeliveredAt)
+            .HasColumnName("delivered_at");
+            
+        modelBuilder.Entity<Shipment>()
+            .Property(s => s.Notes)
+            .HasColumnName("notes");
+            
+        modelBuilder.Entity<Shipment>()
+            .Property(s => s.CreatedAt)
+            .HasColumnName("created_at");
+            
+        modelBuilder.Entity<Shipment>()
+            .Property(s => s.UpdatedAt)
+            .HasColumnName("updated_at");
+
+        modelBuilder.Entity<Shipment>()
+            .HasOne(s => s.Order)
+            .WithMany()
+            .HasForeignKey(s => s.OrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Configure indexes for Shipment
+        modelBuilder.Entity<Shipment>()
+            .HasIndex(s => s.OrderId)
+            .IsUnique();
+
+        modelBuilder.Entity<Shipment>()
+            .HasIndex(s => s.TrackingNumber);
+
+        modelBuilder.Entity<Shipment>()
+            .HasIndex(s => s.Status);
+
+        modelBuilder.Entity<Shipment>()
+            .HasIndex(s => s.Carrier);
     }
 }

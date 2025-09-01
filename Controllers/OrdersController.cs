@@ -5,11 +5,13 @@ using HubApi.Models;
 using HubApi.DTOs;
 using HubApi.Services;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+
 
 namespace HubApi.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class OrdersController : ControllerBase
     {
         private readonly OrderHubDbContext _context;
@@ -39,9 +41,8 @@ namespace HubApi.Controllers
         {
             try
             {
-                var query = _context.Orders
+                var query = _context.OrdersV2
                     .Include(o => o.Site)
-                    .Include(o => o.OrderItems)
                     .AsQueryable();
 
                 // Apply filters
@@ -54,11 +55,13 @@ namespace HubApi.Controllers
                 if (!string.IsNullOrEmpty(paymentGateway))
                     query = query.Where(o => o.PaymentGatewayCode == paymentGateway);
 
-                if (fromDate.HasValue)
-                    query = query.Where(o => o.PlacedAt >= fromDate.Value);
+                // Note: Date filtering disabled for now since PlacedAt is stored as string
+                // TODO: Implement proper date parsing for string dates
+                // if (fromDate.HasValue)
+                //     query = query.Where(o => DateTime.Parse(o.PlacedAt) >= fromDate.Value);
 
-                if (toDate.HasValue)
-                    query = query.Where(o => o.PlacedAt <= toDate.Value);
+                // if (toDate.HasValue)
+                //     query = query.Where(o => DateTime.Parse(o.PlacedAt) <= toDate.Value);
 
                 if (!string.IsNullOrEmpty(search))
                 {
@@ -71,9 +74,23 @@ namespace HubApi.Controllers
                 // Apply pagination
                 var totalCount = await query.CountAsync();
                 var orders = await query
-                    .OrderByDescending(o => o.PlacedAt)
+                    .OrderByDescending(o => o.SyncedAt) // Use SyncedAt for ordering since PlacedAt is string
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
+                    .Select(o => new
+                    {
+                        o.Id,
+                        o.WcOrderId,
+                        o.SiteId,
+                        SiteName = o.Site.Name,
+                        o.CustomerName,
+                        o.CustomerEmail,
+                        o.OrderTotal,
+                        o.Status,
+                        o.PlacedAt,
+                        o.SyncedAt,
+                        ProfitCalculated = false // TODO: Check if profit exists in order_profits table
+                    })
                     .ToListAsync();
 
                 Response.Headers.Add("X-Total-Count", totalCount.ToString());
@@ -85,6 +102,140 @@ namespace HubApi.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving orders");
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+
+
+        /// <summary>
+        /// Get orders for a specific partner (from their assigned sites)
+        /// </summary>
+        [HttpGet("partner/{partnerId}")]
+        public async Task<ActionResult<IEnumerable<object>>> GetOrdersForPartner(Guid partnerId)
+        {
+            try
+            {
+                // Get all site assignments for this partner
+                var siteAssignments = await _context.SitePartners
+                    .Where(sp => sp.PartnerId == partnerId && sp.IsActive)
+                    .Select(sp => sp.SiteId)
+                    .ToListAsync();
+
+                if (!siteAssignments.Any())
+                {
+                    return Ok(new List<object>());
+                }
+
+                // Get orders from assigned sites (orders_v2 table)
+                var orders = await _context.OrdersV2
+                    .Where(o => siteAssignments.Contains(o.SiteId))
+                    .Select(o => new
+                    {
+                        o.Id,
+                        o.WcOrderId,
+                        o.SiteId,
+                        o.CustomerName,
+                        o.CustomerEmail,
+                        o.OrderTotal,
+                        o.Status,
+                        o.PlacedAt,
+                        o.SyncedAt
+                    })
+                    .OrderByDescending(o => o.SyncedAt) // Use SyncedAt for ordering since PlacedAt is string
+                    .ToListAsync();
+
+                return Ok(orders);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving orders for partner {PartnerId}", partnerId);
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Test endpoint to verify routing
+        /// </summary>
+        [HttpPost("test")]
+        public ActionResult<object> TestEndpoint()
+        {
+            return Ok(new { message = "POST endpoint is working!", timestamp = DateTime.UtcNow });
+        }
+
+        /// <summary>
+        /// Accept raw JSON order data and store it for processing
+        /// </summary>
+        [HttpPost]
+        public async Task<ActionResult<object>> AcceptRawOrder([FromBody] object rawData)
+        {
+            try
+            {
+                // Get API key from header
+                if (!Request.Headers.TryGetValue("X-API-Key", out var apiKeyValues) || !apiKeyValues.Any())
+                {
+                    return BadRequest(new { error = "X-API-Key header is required" });
+                }
+
+                var apiKey = apiKeyValues.First();
+                _logger.LogInformation("Received raw order data with API key: {ApiKey}", apiKey);
+
+                // Find the site by API key
+                var site = await _context.Sites
+                    .FirstOrDefaultAsync(s => s.ApiKey == apiKey && s.IsActive);
+
+                if (site == null)
+                {
+                    _logger.LogWarning("Site not found for API key: {ApiKey}", apiKey);
+                    return BadRequest(new { error = "Invalid API key" });
+                }
+
+                _logger.LogInformation("Processing raw order for site: {SiteName}", site.Name);
+
+                // Create raw order data entry
+                var rawOrderData = new RawOrderData
+                {
+                    Id = Guid.NewGuid(),
+                    SiteId = site.Id,
+                    SiteName = site.Name,
+                    RawJson = JsonSerializer.Serialize(rawData),
+                    ReceivedAt = DateTime.UtcNow,
+                    Processed = false
+                };
+
+                _context.RawOrderData.Add(rawOrderData);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Raw order data saved with ID: {RawOrderId}", rawOrderData.Id);
+
+                // Process the order automatically
+                var orderProcessingService = HttpContext.RequestServices.GetRequiredService<IOrderProcessingService>();
+                var result = await orderProcessingService.ProcessRawOrderDataAsync(rawOrderData.Id);
+
+                if (result.Success)
+                {
+                    _logger.LogInformation("Order processed successfully: {OrderId}", result.ProcessedOrderId);
+                    return Ok(new { 
+                        success = true, 
+                        message = "Order synced and processed successfully",
+                        rawOrderId = rawOrderData.Id,
+                        orderId = result.ProcessedOrderId
+                    });
+                }
+                else
+                {
+                    _logger.LogWarning("Order processing failed: {Error}", result.Message);
+                    return Ok(new { 
+                        success = false, 
+                        message = "Order synced but processing failed",
+                        error = result.Message,
+                        rawOrderId = rawOrderData.Id
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing raw order data");
                 return StatusCode(500, new { error = "Internal server error", details = ex.Message });
             }
         }
@@ -118,213 +269,9 @@ namespace HubApi.Controllers
             }
         }
 
-        /// <summary>
-        /// Synchronize order from WooCommerce plugin
-        /// </summary>
-        [HttpPost]
-        public async Task<IActionResult> SyncOrder([FromBody] OrderSyncRequest request)
-        {
-            try
-            {
-                // Validate request
-                if (request == null)
-                {
-                    return BadRequest(new { error = "Request body is required" });
-                }
 
-                // Validate required fields
-                if (string.IsNullOrEmpty(request.SiteApiKey) || 
-                    string.IsNullOrEmpty(request.Nonce) || 
-                    request.Timestamp == 0 || 
-                    string.IsNullOrEmpty(request.Signature) ||
-                    request.Order == null || 
-                    request.Items == null)
-                {
-                    return BadRequest(new { error = "Missing required fields" });
-                }
 
-                // Find site by API key
-                var site = await _context.Sites
-                    .FirstOrDefaultAsync(s => s.ApiKey == request.SiteApiKey && s.IsActive);
 
-                if (site == null)
-                {
-                    return Unauthorized(new { error = "Invalid API key or site inactive" });
-                }
-
-                // Validate timestamp (within 10 minutes)
-                var requestTime = DateTimeOffset.FromUnixTimeSeconds(request.Timestamp);
-                var currentTime = DateTimeOffset.UtcNow;
-                if (Math.Abs((currentTime - requestTime).TotalMinutes) > 10)
-                {
-                    return Unauthorized(new { error = "Request timestamp is too old or too new" });
-                }
-
-                // Check nonce replay
-                var existingNonce = await _context.RequestNonces
-                    .FirstOrDefaultAsync(n => n.SiteId == site.Id && n.Nonce == request.Nonce);
-
-                if (existingNonce != null)
-                {
-                    return Unauthorized(new { error = "Nonce already used" });
-                }
-
-                // Store nonce to prevent replay
-                var nonce = new RequestNonce
-                {
-                    SiteId = site.Id,
-                    Nonce = request.Nonce,
-                    Timestamp = requestTime.UtcDateTime,
-                    Expires = requestTime.UtcDateTime.AddMinutes(15)
-                };
-                _context.RequestNonces.Add(nonce);
-
-                // Validate signature
-                var signatureBase = $"{request.SiteApiKey}|{request.Timestamp}|{request.Nonce}|{request.Order.WcOrderId}|{request.Order.OrderTotal}";
-                var expectedSignature = ComputeHmacSignature(signatureBase, _cryptoService.Decrypt(site.ApiSecretEnc));
-
-                if (request.Signature != expectedSignature)
-                {
-                    return Unauthorized(new { error = "Invalid signature" });
-                }
-
-                // Find existing order or create new one
-                var existingOrder = await _context.Orders
-                    .FirstOrDefaultAsync(o => o.SiteId == site.Id && o.WcOrderId == request.Order.WcOrderId);
-
-                Order order;
-                if (existingOrder != null)
-                {
-                    // Update existing order
-                    order = existingOrder;
-                    order.Status = request.Order.Status;
-                    order.OrderTotal = request.Order.OrderTotal;
-                    order.Subtotal = request.Order.Subtotal;
-                    order.DiscountTotal = request.Order.DiscountTotal;
-                    order.ShippingTotal = request.Order.ShippingTotal;
-                    order.TaxTotal = request.Order.TaxTotal;
-                    order.PaymentGatewayCode = request.Order.PaymentGatewayCode;
-                    order.CustomerName = request.Order.CustomerName;
-                    order.CustomerEmail = request.Order.CustomerEmail;
-                    order.CustomerPhone = request.Order.CustomerPhone;
-                    order.ShippingAddress = JsonDocument.Parse(JsonSerializer.Serialize(request.Order.ShippingAddress));
-                    order.BillingAddress = JsonDocument.Parse(JsonSerializer.Serialize(request.Order.BillingAddress));
-                }
-                else
-                {
-                    // Create new order
-                    order = new Order
-                    {
-                        Id = Guid.NewGuid(),
-                        SiteId = site.Id,
-                        WcOrderId = request.Order.WcOrderId,
-                        Status = request.Order.Status,
-                        Currency = request.Order.Currency,
-                        OrderTotal = request.Order.OrderTotal,
-                        Subtotal = request.Order.Subtotal,
-                        DiscountTotal = request.Order.DiscountTotal,
-                        ShippingTotal = request.Order.ShippingTotal,
-                        TaxTotal = request.Order.TaxTotal,
-                        PaymentGatewayCode = request.Order.PaymentGatewayCode,
-                        CustomerName = request.Order.CustomerName,
-                        CustomerEmail = request.Order.CustomerEmail,
-                        CustomerPhone = request.Order.CustomerPhone,
-                        ShippingAddress = JsonDocument.Parse(JsonSerializer.Serialize(request.Order.ShippingAddress)),
-                        BillingAddress = JsonDocument.Parse(JsonSerializer.Serialize(request.Order.BillingAddress)),
-                        PlacedAt = request.Order.PlacedAt,
-                        SyncedAt = DateTime.UtcNow
-                    };
-                    _context.Orders.Add(order);
-                }
-
-                // Add order items
-                foreach (var itemRequest in request.Items)
-                {
-                    var orderItem = new OrderItem
-                    {
-                        Id = Guid.NewGuid(),
-                        OrderId = order.Id,
-                        ProductId = itemRequest.ProductId,
-                        Sku = itemRequest.Sku,
-                        Name = itemRequest.Name,
-                        Qty = itemRequest.Qty,
-                        Price = itemRequest.Price,
-                        Subtotal = itemRequest.Subtotal,
-                        Total = itemRequest.Total
-                    };
-                    _context.OrderItems.Add(orderItem);
-                }
-
-                // Calculate and store revenue shares
-                await CalculateRevenueShares(order, site, request.GatewayFeePercent, request.GatewayFeeAmount);
-
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Order synchronized successfully: {OrderId} from site {SiteId}", 
-                    order.WcOrderId, site.Id);
-
-                return Ok(new { ok = true, order_id = order.Id });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error synchronizing order");
-                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Bulk sync multiple orders
-        /// </summary>
-        [HttpPost("bulk")]
-        public async Task<IActionResult> BulkSyncOrders([FromBody] List<OrderSyncRequest> requests)
-        {
-            try
-            {
-                if (requests == null || !requests.Any())
-                {
-                    return BadRequest(new { error = "Request body must contain at least one order" });
-                }
-
-                var results = new List<object>();
-                var successCount = 0;
-                var errorCount = 0;
-
-                foreach (var request in requests)
-                {
-                    try
-                    {
-                        var result = await SyncOrder(request);
-                        if (result is OkObjectResult)
-                        {
-                            successCount++;
-                            results.Add(new { order_id = request.Order.WcOrderId, status = "success" });
-                        }
-                        else
-                        {
-                            errorCount++;
-                            results.Add(new { order_id = request.Order.WcOrderId, status = "error", message = "Failed to sync" });
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        errorCount++;
-                        results.Add(new { order_id = request.Order.WcOrderId, status = "error", message = ex.Message });
-                    }
-                }
-
-                return Ok(new 
-                { 
-                    ok = true, 
-                    summary = new { total = requests.Count, success = successCount, errors = errorCount },
-                    results = results
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in bulk order sync");
-                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
-            }
-        }
 
         /// <summary>
         /// Delete an order
@@ -372,13 +319,18 @@ namespace HubApi.Controllers
         {
             try
             {
-                var query = _context.Orders.AsQueryable();
+                var query = _context.OrdersV2.AsQueryable();
 
-                if (fromDate.HasValue)
-                    query = query.Where(o => o.PlacedAt >= fromDate.Value);
+                // Note: Date filtering disabled for now since PlacedAt is stored as string
+                // TODO: Implement proper date parsing for string dates
+                // if (fromDate.HasValue)
+                //     query = query.Where(o => DateTime.Parse(o.PlacedAt) >= fromDate.Value);
 
-                if (toDate.HasValue)
-                    query = query.Where(o => o.PlacedAt <= toDate.Value);
+                // if (toDate.HasValue)
+                //     query = query.Where(o => DateTime.Parse(o.PlacedAt) <= toDate.Value);
+
+                // Exclude cancelled and refunded orders from revenue calculations
+                var revenueQuery = query.Where(o => o.Status.ToLower() != "cancelled" && o.Status.ToLower() != "refunded");
 
                 var stats = await query
                     .GroupBy(o => o.SiteId)
@@ -386,16 +338,16 @@ namespace HubApi.Controllers
                     {
                         site_id = g.Key,
                         total_orders = g.Count(),
-                        total_revenue = g.Sum(o => o.OrderTotal),
-                        average_order_value = g.Average(o => o.OrderTotal)
+                        total_revenue = revenueQuery.Where(o => o.SiteId == g.Key).Sum(o => decimal.Parse(o.OrderTotal)),
+                        average_order_value = revenueQuery.Where(o => o.SiteId == g.Key).Average(o => decimal.Parse(o.OrderTotal))
                     })
                     .ToListAsync();
 
                 var totalStats = new
                 {
                     total_orders = await query.CountAsync(),
-                    total_revenue = await query.SumAsync(o => o.OrderTotal),
-                    average_order_value = await query.AverageAsync(o => o.OrderTotal),
+                    total_revenue = await revenueQuery.SumAsync(o => decimal.Parse(o.OrderTotal)),
+                    average_order_value = await revenueQuery.AverageAsync(o => decimal.Parse(o.OrderTotal)),
                     by_site = stats
                 };
 
@@ -408,97 +360,11 @@ namespace HubApi.Controllers
             }
         }
 
-        /// <summary>
-        /// Compute HMAC signature
-        /// </summary>
-        private string ComputeHmacSignature(string data, string secret)
-        {
-            using var hmac = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(secret));
-            var hashBytes = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(data));
-            return Convert.ToBase64String(hashBytes);
-        }
 
-        /// <summary>
-        /// Calculate revenue shares for an order
-        /// </summary>
-        private async Task CalculateRevenueShares(Order order, Site site, decimal? gatewayFeePercent = null, decimal? gatewayFeeAmount = null)
-        {
-            try
-            {
-                // Get site partners
-                var sitePartners = await _context.SitePartners
-                    .Include(sp => sp.Partner)
-                    .Where(sp => sp.SiteId == site.Id)
-                    .ToListAsync();
 
-                // Get site gateways
-                var siteGateways = await _context.SiteGateways
-                    .Include(sg => sg.Gateway)
-                    .Where(sg => sg.SiteId == site.Id)
-                    .ToListAsync();
 
-                // Calculate gateway fee
-                decimal gatewayFee = 0;
-                if (gatewayFeeAmount.HasValue)
-                {
-                    gatewayFee = gatewayFeeAmount.Value;
-                }
-                else if (gatewayFeePercent.HasValue)
-                {
-                    gatewayFee = order.OrderTotal * (gatewayFeePercent.Value / 100);
-                }
-                else
-                {
-                    // Get from site gateways
-                    var siteGateway = siteGateways.FirstOrDefault(sg => sg.Gateway.Code == order.PaymentGatewayCode);
-                    if (siteGateway != null)
-                    {
-                        gatewayFee = order.OrderTotal * (siteGateway.WebsiteSharePercent / 100);
-                    }
-                }
 
-                // Calculate partner shares
-                foreach (var sitePartner in sitePartners)
-                {
-                    var partnerShare = order.OrderTotal * (sitePartner.SharePercent / 100);
-                    var websiteShare = order.OrderTotal - partnerShare - gatewayFee;
 
-                    var revenueShare = new RevenueShare
-                    {
-                        Id = Guid.NewGuid(),
-                        OrderId = order.Id,
-                        PartnerId = sitePartner.PartnerId,
-                        PartnerShareAmount = partnerShare,
-                        WebsiteShareAmount = websiteShare,
-                        GatewayFeeAmount = gatewayFee,
-                        ComputedAt = DateTime.UtcNow
-                    };
 
-                    _context.RevenueShares.Add(revenueShare);
-                }
-
-                // If no partners, create website-only share
-                if (!sitePartners.Any())
-                {
-                    var websiteShare = new RevenueShare
-                    {
-                        Id = Guid.NewGuid(),
-                        OrderId = order.Id,
-                        PartnerId = Guid.Empty, // Use empty GUID instead of null
-                        PartnerShareAmount = 0,
-                        WebsiteShareAmount = order.OrderTotal - gatewayFee,
-                        GatewayFeeAmount = gatewayFee,
-                        ComputedAt = DateTime.UtcNow
-                    };
-
-                    _context.RevenueShares.Add(websiteShare);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error calculating revenue shares for order {OrderId}", order.Id);
-                // Don't throw - revenue share calculation failure shouldn't break order sync
-            }
-        }
     }
 }

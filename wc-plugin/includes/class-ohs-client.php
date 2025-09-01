@@ -92,7 +92,7 @@ class OHS_Client {
         $payload = $this->build_order_payload($order);
         
         // Send order to Order Hub API
-        $response = wp_remote_post($this->get_api_url('orders/sync'), array(
+        $response = wp_remote_post($this->get_api_url('orders'), array(
             'timeout' => 30,
             'headers' => array(
                 'Content-Type' => 'application/json',
@@ -201,13 +201,13 @@ class OHS_Client {
         $items = array();
         foreach ($order->get_items() as $item) {
             $items[] = array(
-                'product_id' => $item->get_product_id(),
-                'sku' => $item->get_product()->get_sku(),
-                'name' => $item->get_name(),
-                'qty' => $item->get_quantity(),
-                'price' => $item->get_total() / $item->get_quantity(),
-                'subtotal' => $item->get_subtotal(),
-                'total' => $item->get_total()
+                'ProductId' => $item->get_product_id(),
+                'Sku' => $item->get_product()->get_sku(),
+                'Name' => $item->get_name(),
+                'Qty' => $item->get_quantity(),
+                'Price' => $item->get_total() / $item->get_quantity(),
+                'Subtotal' => $item->get_subtotal(),
+                'Total' => $item->get_total()
             );
         }
         

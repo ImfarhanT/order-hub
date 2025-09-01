@@ -1,0 +1,1249 @@
+@page
+@model HubApi.Pages.Admin.GatewayPartnerRevenueModel
+@{
+    ViewData["Title"] = "Gateway Partner Revenue";
+    ViewData["ActivePage"] = "GatewayPartnerRevenue";
+}
+
+<!-- Bootstrap CSS and JS CDN -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    /* Custom styles for summary cards */
+    .summary-cards-container {
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: stretch;
+    }
+    
+    .summary-card {
+        flex: 1;
+        min-width: 200px;
+        max-width: 300px;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-radius: 8px;
+    }
+    
+    .summary-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    }
+    
+    .summary-card .card-body {
+        padding: 1.5rem;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .summary-card .card-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .summary-card h4 {
+        font-weight: 700;
+        font-size: 1.8rem;
+        margin-bottom: 0;
+    }
+    
+    .summary-card .fa-2x {
+        font-size: 2.5rem;
+    }
+    
+    /* Responsive adjustments */
+    @@media (max-width: 1200px) {
+        .summary-cards-container {
+            gap: 0.75rem;
+        }
+        
+        .summary-card {
+            min-width: 180px;
+        }
+        
+        .summary-card .card-body {
+            padding: 1.25rem;
+        }
+        
+        .summary-card h4 {
+            font-size: 1.6rem;
+        }
+        
+        .summary-card .fa-2x {
+            font-size: 2.2rem;
+        }
+    }
+    
+    @@media (max-width: 768px) {
+        .summary-cards-container {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .summary-card {
+            min-width: 100%;
+            max-width: 100%;
+        }
+        
+        .summary-card .card-body {
+            padding: 1rem;
+        }
+        
+        .summary-card h4 {
+            font-size: 1.5rem;
+        }
+        
+        .summary-card .fa-2x {
+            font-size: 2rem;
+        }
+    }
+    
+    /* Table improvements */
+    .table th {
+        background-color: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    /* Modal improvements */
+    .modal-xl {
+        max-width: 95%;
+    }
+    
+    .modal-body {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-chart-line me-2"></i>Gateway Partner Revenue
+        </h1>
+        <div class="text-muted">
+            <small>Revenue calculation and reporting for gateway partners</small>
+        </div>
+    </div>
+
+    <!-- Date Range Selector -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Report Period</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="startDate" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="startDate" value="@DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd")">
+                </div>
+                <div class="col-md-3">
+                    <label for="endDate" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="endDate" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="button" class="btn btn-primary" onclick="generateReport()">
+                            <i class="fas fa-sync-alt"></i> Generate Report
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="button" class="btn btn-success me-2" onclick="exportReport()">
+                            <i class="fas fa-download"></i> Export CSV
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="exportFullPdf()">
+                            <i class="fas fa-file-pdf"></i> Export PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Summary Cards -->
+    <div class="mb-4" id="summaryCards" style="display: none;">
+        <div class="summary-cards-container">
+            <div class="summary-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Total Revenue</h6>
+                            <h4 class="mb-0" id="totalRevenue">$0.00</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-dollar-sign fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="summary-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Total Orders</h6>
+                            <h4 class="mb-0" id="totalOrders">0</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-shopping-cart fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="summary-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Gateways</h6>
+                            <h4 class="mb-0" id="gatewayCount">0</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-credit-card fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="summary-card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Partners</h6>
+                            <h4 class="mb-0" id="partnerCount">0</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-handshake fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Content -->
+    <div id="reportContent" style="display: none;">
+        <!-- Gateway Revenue Summary -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Gateway Revenue Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="gatewayTable">
+                        <thead>
+                            <tr>
+                                <th>Gateway</th>
+                                <th>Total Revenue</th>
+                                <th>Gateway Fees</th>
+                                <th>Net Revenue</th>
+                                <th>Orders</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gatewayTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Partner Revenue Summary -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Partner Revenue Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="partnerTable">
+                        <thead>
+                            <tr>
+                                <th>Partner</th>
+                                <th>Total Revenue Share</th>
+                                <th>Orders</th>
+                                <th>Gateway Breakdown</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="partnerTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Details -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Order Revenue Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="orderTable">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Site</th>
+                                <th>Customer</th>
+                                <th>Total</th>
+                                <th>Gateway</th>
+                                <th>Gateway Fees</th>
+                                <th>Net Revenue</th>
+                                <th>Partner Shares</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-muted">Generating revenue report...</p>
+    </div>
+
+    <!-- Gateway Details Modal -->
+    <div class="modal fade" id="gatewayDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Gateway Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="gatewayDetailsContent">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Partner Details Modal -->
+    <div class="modal fade" id="partnerDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Partner Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="partnerDetailsContent">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentReport = null;
+
+        function generateReport() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate || !endDate) {
+                showAlert('Please select both start and end dates', 'warning');
+                return;
+            }
+
+            if (new Date(startDate) >= new Date(endDate)) {
+                showAlert('Start date must be before end date', 'warning');
+                return;
+            }
+
+            showLoading(true);
+            
+            fetch(`/api/v1/gatewaypartnerrevenue/report?startDate=${startDate}&endDate=${endDate}`)
+                .then(response => response.json())
+                .then(data => {
+                    currentReport = data;
+                    displayReport(data);
+                    showLoading(false);
+                })
+                .catch(error => {
+                    console.error('Error generating report:', error);
+                    showAlert('Error generating report: ' + error.message, 'danger');
+                    showLoading(false);
+                });
+        }
+
+        function displayReport(report) {
+            // Display summary cards
+            document.getElementById('totalRevenue').textContent = formatCurrency(report.totalRevenue);
+            document.getElementById('totalOrders').textContent = report.orderDetails.length;
+            document.getElementById('gatewayCount').textContent = report.gatewaySummaries.length;
+            document.getElementById('partnerCount').textContent = report.partnerSummaries.length;
+            document.getElementById('summaryCards').style.display = 'block';
+
+            // Display gateway summary
+            displayGatewaySummary(report.gatewaySummaries);
+
+            // Display partner summary
+            displayPartnerSummary(report.partnerSummaries);
+
+            // Display order details
+            displayOrderDetails(report.orderDetails);
+
+            // Show report content
+            document.getElementById('reportContent').style.display = 'block';
+        }
+
+        function displayGatewaySummary(gateways) {
+            const tbody = document.getElementById('gatewayTableBody');
+            tbody.innerHTML = '';
+
+            gateways.forEach(gateway => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <strong>${gateway.gatewayName}</strong><br>
+                        <small class="text-muted">${gateway.gatewayCode}</small>
+                    </td>
+                    <td>${formatCurrency(gateway.totalRevenue)}</td>
+                    <td>${formatCurrency(gateway.totalFees)}</td>
+                    <td>${formatCurrency(gateway.netRevenue)}</td>
+                    <td><span class="badge bg-primary">${gateway.orderCount}</span></td>
+                                            <td>
+                            <button type="button" class="btn btn-sm btn-outline-info me-1" onclick="viewGatewayDetails('${gateway.gatewayId}', '${gateway.gatewayCode}')">
+                                <i class="fas fa-eye"></i> Details
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="exportGatewayPdf('${gateway.gatewayId}')">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </button>
+                        </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function displayPartnerSummary(partners) {
+            const tbody = document.getElementById('partnerTableBody');
+            tbody.innerHTML = '';
+
+            partners.forEach(partner => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <strong>${partner.partnerName}</strong><br>
+                        <small class="text-muted">${partner.partnerCode}</small>
+                    </td>
+                    <td>${formatCurrency(partner.totalRevenueShare)}</td>
+                    <td><span class="badge bg-success">${partner.orderCount}</span></td>
+                    <td>
+                        ${partner.gatewayRevenues.map(gw => 
+                            `<div class="mb-1">
+                                <small>${gw.gatewayCode}: ${formatCurrency(gw.revenueShare)} (${gw.assignmentPercentage.toFixed(1)}%)</small>
+                            </div>`
+                        ).join('')}
+                    </td>
+                                            <td>
+                            <button type="button" class="btn btn-sm btn-outline-info me-1" onclick="viewPartnerDetails('${partner.partnerId}', '${partner.partnerCode}')">
+                                <i class="fas fa-eye"></i> Details
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="exportPartnerPdf('${partner.partnerId}')">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </button>
+                        </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function displayOrderDetails(orders) {
+            const tbody = document.getElementById('orderTableBody');
+            tbody.innerHTML = '';
+
+            orders.forEach(order => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <strong>${order.wcOrderId}</strong><br>
+                        <small class="text-muted">ID: ${order.orderId.substring(0, 8)}...</small>
+                    </td>
+                    <td><span class="badge bg-primary">${order.siteName}</span></td>
+                    <td>${order.customerName}</td>
+                    <td>${formatCurrency(order.orderTotal)}</td>
+                    <td><small>${order.paymentGatewayCode}</small></td>
+                    <td>${formatCurrency(order.gatewayFees)}</td>
+                    <td>${formatCurrency(order.netRevenue)}</td>
+                    <td>
+                        ${order.partnerRevenues.map(pr => 
+                            `<div class="mb-1">
+                                <small>${pr.partnerName}: ${formatCurrency(pr.revenueShare)} (${pr.assignmentPercentage.toFixed(1)}%)</small>
+                            </div>`
+                        ).join('')}
+                    </td>
+                    <td>
+                        <small>${new Date(order.placedAt).toLocaleDateString()}</small>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function viewGatewayDetails(gatewayId, gatewayCode) {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('gatewayDetailsModal'));
+            modal.show();
+            
+            // Update modal title
+            document.querySelector('#gatewayDetailsModal .modal-title').textContent = `Gateway Details - ${gatewayCode}`;
+            
+            // Fetch and display gateway details
+            fetchGatewayDetails(gatewayId, startDate, endDate);
+        }
+
+        function viewPartnerDetails(partnerId, partnerCode) {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('partnerDetailsModal'));
+            modal.show();
+            
+            // Update modal title
+            document.querySelector('#partnerDetailsModal .modal-title').textContent = `Partner Details - ${partnerCode}`;
+            
+            // Fetch and display partner details
+            fetchPartnerDetails(partnerId, startDate, endDate);
+        }
+
+        async function fetchGatewayDetails(gatewayId, startDate, endDate) {
+            try {
+                const response = await fetch(`/api/v1/gatewaypartnerrevenue/gateway/${gatewayId}/report?startDate=${startDate}&endDate=${endDate}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    displayGatewayDetails(data);
+                } else {
+                    document.getElementById('gatewayDetailsContent').innerHTML = 
+                        '<div class="alert alert-danger">Failed to load gateway details</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching gateway details:', error);
+                document.getElementById('gatewayDetailsContent').innerHTML = 
+                    '<div class="alert alert-danger">Error loading gateway details: ' + error.message + '</div>';
+            }
+        }
+
+        async function fetchPartnerDetails(partnerId, startDate, endDate) {
+            try {
+                const response = await fetch(`/api/v1/gatewaypartnerrevenue/partner/${partnerId}/report?startDate=${startDate}&endDate=${endDate}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    displayPartnerDetails(data);
+                } else {
+                    document.getElementById('partnerDetailsContent').innerHTML = 
+                        '<div class="alert alert-danger">Failed to load partner details</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching partner details:', error);
+                document.getElementById('partnerDetailsContent').innerHTML = 
+                    '<div class="alert alert-danger">Error loading partner details: ' + error.message + '</div>';
+            }
+        }
+
+        function displayGatewayDetails(data) {
+            const content = document.getElementById('gatewayDetailsContent');
+            
+            if (data.gatewaySummaries.length === 0) {
+                content.innerHTML = '<div class="alert alert-warning">No gateway data found</div>';
+                return;
+            }
+
+            const gateway = data.gatewaySummaries[0];
+            
+            content.innerHTML = `
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h4 class="mb-2">${gateway.gatewayName}</h4>
+                                        <p class="mb-0 opacity-75">Gateway Code: ${gateway.gatewayCode}</p>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <h2 class="mb-0">${formatCurrency(gateway.totalRevenue)}</h2>
+                                        <small class="opacity-75">Total Revenue</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white text-center">
+                            <div class="card-body">
+                                <h3 class="mb-1">${gateway.orderCount}</h3>
+                                <small>Total Orders</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white text-center">
+                            <div class="card-body">
+                                <h3 class="mb-1">${formatCurrency(gateway.totalFees)}</h3>
+                                <small>Gateway Fees</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white text-center">
+                            <div class="card-body">
+                                <h3 class="mb-1">${formatCurrency(gateway.netRevenue)}</h3>
+                                <small>Net Revenue</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-secondary text-white text-center">
+                            <div class="card-body">
+                                <h3 class="mb-1">${gateway.totalFees > 0 ? ((gateway.totalFees / gateway.totalRevenue) * 100).toFixed(2) : '0'}%</h3>
+                                <small>Fee Rate</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Revenue Breakdown</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="gatewayRevenueChart" width="300" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Performance Metrics</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <div class="border-end">
+                                            <h4 class="text-success mb-1">${gateway.totalRevenue > 0 ? ((gateway.netRevenue / gateway.totalRevenue) * 100).toFixed(1) : '0'}%</h4>
+                                            <small class="text-muted">Profit Margin</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <h4 class="text-primary mb-1">${gateway.orderCount > 0 ? (gateway.totalRevenue / gateway.orderCount).toFixed(2) : '0'}</h4>
+                                        <small class="text-muted">Avg Order Value</small>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <h4 class="text-warning mb-1">${gateway.orderCount > 0 ? (gateway.totalFees / gateway.orderCount).toFixed(2) : '0'}</h4>
+                                        <small class="text-muted">Avg Fee per Order</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <h4 class="text-info mb-1">${gateway.orderCount > 0 ? (gateway.netRevenue / gateway.orderCount).toFixed(2) : '0'}</h4>
+                                        <small class="text-muted">Avg Net per Order</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0"><i class="fas fa-list me-2"></i>Order Details (${data.orderDetails.length} orders)</h6>
+                                <div>
+                                    <span class="badge bg-primary me-2">Period: ${new Date(data.startDate).toLocaleDateString()} - ${new Date(data.endDate).toLocaleDateString()}</span>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="exportGatewayPdf('${gateway.gatewayId}')">
+                                        <i class="fas fa-file-pdf me-1"></i>Export PDF
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Order ID</th>
+                                                <th>Site</th>
+                                                <th>Customer</th>
+                                                <th>Order Total</th>
+                                                <th>Gateway Fees</th>
+                                                <th>Net Revenue</th>
+                                                <th>Partner Shares</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${data.orderDetails.map(order => {
+                                                const partnerShares = order.partnerRevenues ? order.partnerRevenues.map(pr => 
+                                                    `${pr.partnerName}: ${formatCurrency(pr.revenueShare)} (${pr.assignmentPercentage.toFixed(1)}%)`
+                                                ).join('<br>') : 'No partners';
+                                                
+                                                const orderDate = new Date(order.placedAt);
+                                                const isRecent = (new Date() - orderDate) < (7 * 24 * 60 * 60 * 1000);
+                                                const statusClass = isRecent ? 'bg-success' : 'bg-secondary';
+                                                const statusText = isRecent ? 'Recent' : 'Older';
+                                                
+                                                return `
+                                                    <tr>
+                                                        <td>
+                                                            <strong>#${order.wcOrderId}</strong><br>
+                                                            <small class="text-muted">${order.orderId.substring(0, 8)}...</small>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-primary">${order.siteName}</span>
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <strong>${order.customerName}</strong><br>
+                                                                <small class="text-muted">${order.customerEmail}</small>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-success fs-6">${formatCurrency(order.orderTotal)}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-warning">${formatCurrency(order.gatewayFees)}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-info fs-6">${formatCurrency(order.netRevenue)}</span>
+                                                        </td>
+                                                        <td>
+                                                            <small>${partnerShares}</small>
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <strong>${orderDate.toLocaleDateString()}</strong><br>
+                                                                <small class="text-muted">${orderDate.toLocaleTimeString()}</small>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge ${statusClass}">${statusText}</span>
+                                                        </td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Initialize revenue chart
+            setTimeout(() => {
+                const ctx = document.getElementById('gatewayRevenueChart');
+                if (ctx) {
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Net Revenue', 'Gateway Fees'],
+                            datasets: [{
+                                data: [gateway.netRevenue, gateway.totalFees],
+                                backgroundColor: ['#17a2b8', '#ffc107'],
+                                borderWidth: 2,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                }
+            }, 100);
+        }
+
+        function displayPartnerDetails(data) {
+            const content = document.getElementById('partnerDetailsContent');
+            
+            if (data.partnerSummaries.length === 0) {
+                content.innerHTML = '<div class="alert alert-warning">No partner data found</div>';
+                return;
+            }
+
+            const partner = data.partnerSummaries[0];
+            
+            content.innerHTML = `
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h4 class="mb-2">${partner.partnerName}</h4>
+                                        <p class="mb-0 opacity-75">Partner Code: ${partner.partnerCode}</p>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <h2 class="mb-0">${formatCurrency(partner.totalRevenueShare)}</h2>
+                                        <small class="opacity-75">Total Revenue Share</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white text-center">
+                            <div class="card-body">
+                                <h3 class="mb-1">${partner.orderCount}</h3>
+                                <small>Total Orders</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white text-center">
+                            <div class="card-body">
+                                <h3 class="mb-1">${partner.gatewayRevenues ? partner.gatewayRevenues.length : 0}</h3>
+                                <small>Active Gateways</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white text-center">
+                            <div class="card-body">
+                                <h3 class="mb-1">${partner.orderCount > 0 ? (partner.totalRevenueShare / partner.orderCount).toFixed(2) : '0'}</h3>
+                                <small>Avg Share per Order</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-secondary text-white text-center">
+                            <div class="card-body">
+                                <h3 class="mb-1">${partner.gatewayRevenues && partner.gatewayRevenues.length > 0 ? 
+                                    (partner.gatewayRevenues.reduce((sum, gw) => sum + gw.assignmentPercentage, 0) / partner.gatewayRevenues.length).toFixed(1) : '0'}%</h3>
+                                <small>Avg Assignment %</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Revenue by Gateway</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="partnerGatewayChart" width="300" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Assignment Distribution</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="partnerAssignmentChart" width="300" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-sitemap me-2"></i>Gateway Revenue Breakdown</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Gateway</th>
+                                                <th>Revenue Share</th>
+                                                <th>Assignment %</th>
+                                                <th>Orders</th>
+                                                <th>Avg Share per Order</th>
+                                                <th>Performance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${partner.gatewayRevenues ? partner.gatewayRevenues.map(gw => {
+                                                const avgShare = gw.orderCount > 0 ? gw.revenueShare / gw.orderCount : 0;
+                                                const performanceClass = avgShare > 10 ? 'bg-success' : avgShare > 5 ? 'bg-warning' : 'bg-danger';
+                                                const performanceText = avgShare > 10 ? 'Excellent' : avgShare > 5 ? 'Good' : 'Low';
+                                                
+                                                return `
+                                                    <tr>
+                                                        <td>
+                                                            <strong>${gw.gatewayCode}</strong><br>
+                                                            <small class="text-muted">${gw.gatewayName || 'N/A'}</small>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-success fs-6">${formatCurrency(gw.revenueShare)}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-primary">${gw.assignmentPercentage.toFixed(1)}%</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-info">${gw.orderCount || 0}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-secondary">${formatCurrency(avgShare)}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge ${performanceClass}">${performanceText}</span>
+                                                        </td>
+                                                    </tr>
+                                                `;
+                                            }).join('') : '<tr><td colspan="6" class="text-center text-muted">No gateway data available</td></tr>'}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0"><i class="fas fa-list me-2"></i>Order Details (${data.orderDetails.length} orders)</h6>
+                                <div>
+                                    <span class="badge bg-primary me-2">Period: ${new Date(data.startDate).toLocaleDateString()} - ${new Date(data.endDate).toLocaleDateString()}</span>
+                                    <button class="btn btn-sm btn-outline-success" onclick="exportPartnerPdf('${partner.partnerId}')">
+                                        <i class="fas fa-file-pdf me-1"></i>Export PDF
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Order ID</th>
+                                                <th>Site</th>
+                                                <th>Customer</th>
+                                                <th>Order Total</th>
+                                                <th>Gateway</th>
+                                                <th>Revenue Share</th>
+                                                <th>Assignment %</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${data.orderDetails.map(order => {
+                                                const partnerRevenue = order.partnerRevenues ? order.partnerRevenues.find(pr => pr.partnerId === partner.partnerId) : null;
+                                                const orderDate = new Date(order.placedAt);
+                                                const isRecent = (new Date() - orderDate) < (7 * 24 * 60 * 60 * 1000);
+                                                const statusClass = isRecent ? 'bg-success' : 'bg-secondary';
+                                                const statusText = isRecent ? 'Recent' : 'Older';
+                                                
+                                                return `
+                                                    <tr>
+                                                        <td>
+                                                            <strong>#${order.wcOrderId}</strong><br>
+                                                            <small class="text-muted">${order.orderId.substring(0, 8)}...</small>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-primary">${order.siteName}</span>
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <strong>${order.customerName}</strong><br>
+                                                                <small class="text-muted">${order.customerEmail}</small>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-success fs-6">${formatCurrency(order.orderTotal)}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-info">${order.paymentGatewayCode}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-warning fs-6">${partnerRevenue ? formatCurrency(partnerRevenue.revenueShare) : 'N/A'}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-primary">${partnerRevenue ? partnerRevenue.assignmentPercentage.toFixed(1) + '%' : 'N/A'}</span>
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <strong>${orderDate.toLocaleDateString()}</strong><br>
+                                                                <small class="text-muted">${orderDate.toLocaleTimeString()}</small>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge ${statusClass}">${statusText}</span>
+                                                        </td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Initialize charts
+            setTimeout(() => {
+                // Gateway Revenue Chart
+                const gatewayCtx = document.getElementById('partnerGatewayChart');
+                if (gatewayCtx && partner.gatewayRevenues) {
+                    new Chart(gatewayCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: partner.gatewayRevenues.map(gw => gw.gatewayCode),
+                            datasets: [{
+                                label: 'Revenue Share',
+                                data: partner.gatewayRevenues.map(gw => gw.revenueShare),
+                                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6c757d'],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Assignment Distribution Chart
+                const assignmentCtx = document.getElementById('partnerAssignmentChart');
+                if (assignmentCtx && partner.gatewayRevenues) {
+                    new Chart(assignmentCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: partner.gatewayRevenues.map(gw => gw.gatewayCode),
+                            datasets: [{
+                                data: partner.gatewayRevenues.map(gw => gw.assignmentPercentage),
+                                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6c757d'],
+                                borderWidth: 2,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                }
+            }, 100);
+        }
+
+        function exportReport() {
+            if (!currentReport) {
+                showAlert('Please generate a report first', 'warning');
+                return;
+            }
+
+            // Create CSV content
+            const csvContent = generateCSV(currentReport);
+            
+            // Download CSV file
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gateway-partner-revenue-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function exportFullPdf() {
+            if (!currentReport) {
+                showAlert('Please generate a report first', 'warning');
+                return;
+            }
+
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            const url = `/api/v1/gatewaypartnerrevenue/full-pdf?startDate=${startDate}&endDate=${endDate}`;
+            downloadPdf(url, `full-revenue-report-${startDate}-${endDate}.pdf`);
+        }
+
+        function exportGatewayPdf(gatewayId) {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            const url = `/api/v1/gatewaypartnerrevenue/gateway/${gatewayId}/pdf?startDate=${startDate}&endDate=${endDate}`;
+            downloadPdf(url, `gateway-revenue-${startDate}-${endDate}.pdf`);
+        }
+
+        function exportPartnerPdf(partnerId) {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            const url = `/api/v1/gatewaypartnerrevenue/partner/${partnerId}/pdf?startDate=${startDate}&endDate=${endDate}`;
+            downloadPdf(url, `partner-revenue-${startDate}-${endDate}.pdf`);
+        }
+
+        function downloadPdf(url, filename) {
+            // Show loading indicator
+            showAlert('Generating PDF... Please wait.', 'info');
+            
+            fetch(url)
+                .then(response => {
+                    if (response.ok) {
+                        return response.blob();
+                    } else {
+                        throw new Error('Failed to generate PDF');
+                    }
+                })
+                .then(blob => {
+                    // Download the PDF
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(downloadUrl);
+                    
+                    showAlert('PDF generated and downloaded successfully!', 'success');
+                })
+                .catch(error => {
+                    console.error('Error downloading PDF:', error);
+                    showAlert('Error generating PDF: ' + error.message, 'danger');
+                });
+        }
+
+        function generateCSV(report) {
+            let csv = 'Gateway Partner Revenue Report\n';
+            csv += `Period: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}\n`;
+            csv += `Total Revenue: ${formatCurrency(report.totalRevenue)}\n`;
+            csv += `Total Orders: ${report.orderDetails.length}\n\n`;
+            
+            // Gateway Summary
+            csv += 'Gateway Summary\n';
+            csv += 'Gateway,Total Revenue,Gateway Fees,Net Revenue,Orders\n';
+            report.gatewaySummaries.forEach(gw => {
+                csv += `${gw.gatewayName},${gw.totalRevenue},${gw.totalFees},${gw.netRevenue},${gw.orderCount}\n`;
+            });
+            
+            csv += '\nPartner Summary\n';
+            csv += 'Partner,Total Revenue Share,Orders\n';
+            report.partnerSummaries.forEach(p => {
+                csv += `${p.partnerName},${p.totalRevenueShare},${p.orderCount}\n`;
+            });
+            
+            csv += '\nOrder Details\n';
+            csv += 'Order ID,Site,Customer,Total,Gateway,Gateway Fees,Net Revenue,Date\n';
+            report.orderDetails.forEach(o => {
+                csv += `${o.wcOrderId},${o.siteName},${o.customerName},${o.orderTotal},${o.paymentGatewayCode},${o.gatewayFees},${o.netRevenue},${new Date(o.placedAt).toLocaleDateString()}\n`;
+            });
+            
+            return csv;
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingSpinner').style.display = show ? 'block' : 'none';
+            document.getElementById('reportContent').style.display = show ? 'none' : 'block';
+            document.getElementById('summaryCards').style.display = show ? 'none' : 'block';
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            `;
+            
+            const container = document.querySelector('.container-fluid');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // Initialize with last 30 days
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+            
+            document.getElementById('startDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+        });
+    </script>
+}

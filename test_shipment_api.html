@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .test-button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px; white-space: pre-wrap; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    </style>
+</head>
+<body>
+    <h1>🚚 Shipment API Test Page</h1>
+    
+    <div class="test-section">
+        <h3>1. Test Database Connection</h3>
+        <button class="test-button" onclick="testDbConnection()">Test DB Connection</button>
+        <div id="db-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Test Simple Orders Query</h3>
+        <button class="test-button" onclick="testOrdersSimple()">Test Orders Simple</button>
+        <div id="orders-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Test Simple Shipments Query</h3>
+        <button class="test-button" onclick="testShipmentsSimple()">Test Shipments Simple</button>
+        <div id="shipments-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Test Original Pending Orders</h3>
+        <button class="test-button" onclick="testPendingOrders()">Test Pending Orders</button>
+        <div id="pending-result" class="result"></div>
+    </div>
+
+    <script>
+        const baseUrl = 'https://order-hub-production.up.railway.app/api/v1';
+        
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = `result ${isError ? 'error' : 'success'}`;
+        }
+        
+        async function testDbConnection() {
+            try {
+                console.log('Testing database connection...');
+                const response = await fetch(`${baseUrl}/test/db-connection`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('db-result', data);
+                } else {
+                    showResult('db-result', data, true);
+                }
+            } catch (error) {
+                showResult('db-result', { error: error.message }, true);
+            }
+        }
+        
+        async function testOrdersSimple() {
+            try {
+                console.log('Testing simple orders query...');
+                const response = await fetch(`${baseUrl}/test/orders-simple`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('orders-result', data);
+                } else {
+                    showResult('orders-result', data, true);
+                }
+            } catch (error) {
+                showResult('orders-result', { error: error.message }, true);
+            }
+        }
+        
+        async function testShipmentsSimple() {
+            try {
+                console.log('Testing simple shipments query...');
+                const response = await fetch(`${baseUrl}/test/shipments-simple`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('shipments-result', data);
+                } else {
+                    showResult('shipments-result', data, true);
+                }
+            } catch (error) {
+                showResult('shipments-result', { error: error.message }, true);
+            }
+        }
+        
+        async function testPendingOrders() {
+            try {
+                console.log('Testing original pending orders...');
+                const response = await fetch(`${baseUrl}/shipments/pending-orders`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('pending-result', data);
+                } else {
+                    showResult('pending-result', data, true);
+                }
+            } catch (error) {
+                showResult('pending-result', { error: error.message }, true);
+            }
+        }
+    </script>
+</body>
+</html>
+
+

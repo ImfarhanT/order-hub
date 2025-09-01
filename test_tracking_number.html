@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Tracking Number</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .test-button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px; white-space: pre-wrap; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .tracking-info { background: #e7f3ff; border: 1px solid #b3d9ff; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🚚 Test Tracking Number</h1>
+    
+    <div class="tracking-info">
+        <h3>Tracking Number: <strong>4207520592612903396155000113573771</strong></h3>
+        <p>This will test our AfterShip integration to get live tracking data.</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>1. Test AfterShip API Directly</h3>
+        <button class="test-button" onclick="testAfterShipDirect()">Test AfterShip API</button>
+        <div id="aftership-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Test Our Shipment API</h3>
+        <button class="test-button" onclick="testShipmentAPI()">Test Shipment API</button>
+        <div id="shipment-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Test Live Tracking Endpoint</h3>
+        <button class="test-button" onclick="testLiveTracking()">Test Live Tracking</button>
+        <div id="live-tracking-result" class="result"></div>
+    </div>
+
+    <script>
+        const baseUrl = 'https://order-hub-production.up.railway.app/api/v1';
+        const trackingNumber = '9200190381599964028539';
+        
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = `result ${isError ? 'error' : 'success'}`;
+        }
+        
+        async function testAfterShipDirect() {
+            try {
+                console.log('Testing AfterShip API directly...');
+                
+                // Test the new public endpoint
+                const response = await fetch(`${baseUrl}/test-tracking/aftership?trackingNumber=${trackingNumber}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('aftership-result', data);
+                } else {
+                    showResult('aftership-result', data, true);
+                }
+            } catch (error) {
+                showResult('aftership-result', { error: error.message }, true);
+            }
+        }
+        
+        async function testShipmentAPI() {
+            try {
+                console.log('Testing Shipment API...');
+                
+                // Test if shipments endpoint is working
+                const response = await fetch(`${baseUrl}/shipments`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('shipment-result', { 
+                        message: 'Shipment API is working',
+                        totalShipments: data.total,
+                        sampleData: data.data.slice(0, 2) // Show first 2 shipments
+                    });
+                } else {
+                    showResult('shipment-result', data, true);
+                }
+            } catch (error) {
+                showResult('shipment-result', { error: error.message }, true);
+            }
+        }
+        
+        async function testLiveTracking() {
+            try {
+                console.log('Testing Live Tracking...');
+                
+                // This would test the live tracking endpoint once we have a shipment
+                showResult('live-tracking-result', { 
+                    message: 'Live tracking endpoint ready',
+                    note: 'Create a shipment first to test live tracking'
+                });
+                
+            } catch (error) {
+                showResult('live-tracking-result', { error: error.message }, true);
+            }
+        }
+    </script>
+</body>
+</html>

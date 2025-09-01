@@ -89,12 +89,56 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Gateways" ? "active" : "")" 
-                               asp-page="/Admin/Gateways">
-                                <i class="bi bi-credit-card me-2"></i>
-                                Payment Gateways
+                            <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/SitePartners" ? "active" : "")" 
+                               asp-page="/Admin/SitePartners">
+                                <i class="bi bi-link-45deg me-2"></i>
+                                Site-Partner Assignments
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/PartnerRevenue" ? "active" : "")" 
+                               asp-page="/Admin/PartnerRevenue">
+                                <i class="bi bi-chart-line me-2"></i>
+                                Partner Revenue Reports
+                            </a>
+                        </li>
+                                            <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/ProfitManagement" ? "active" : "")"
+                           asp-page="/Admin/ProfitManagement">
+                            <i class="bi bi-calculator me-2"></i>
+                            Profit Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/PaymentGatewayDetails" ? "active" : "")"
+                           asp-page="/Admin/PaymentGatewayDetails">
+                            <i class="bi bi-credit-card me-2"></i>
+                            Payment Gateway Details
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/GatewayPartners" ? "active" : "")"
+                           asp-page="/Admin/GatewayPartners">
+                            <i class="bi bi-handshake me-2"></i>
+                            Gateway Partners
+                        </a>
+                    </li>
+                                                                        <li class="nav-item">
+                                <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/GatewayPartnerRevenue" ? "active" : "")"
+                                   asp-page="/Admin/GatewayPartnerRevenue">
+                                    <i class="bi bi-chart-line me-2"></i>
+                                    Gateway Partner Revenue
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/ShipmentManagement" ? "active" : "")"
+                                   asp-page="/Admin/ShipmentManagement">
+                                    <i class="bi bi-truck me-2"></i>
+                                    Shipment Management
+                                </a>
+                            </li>
+                                                    
+
                     </ul>
                     
                     <hr class="text-muted">
@@ -124,6 +168,7 @@
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

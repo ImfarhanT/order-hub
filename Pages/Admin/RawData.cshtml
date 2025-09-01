@@ -105,33 +105,23 @@
                     </table>
                 </div>
 
-                <!-- Pagination -->
-                @if (Model.TotalPages > 1)
+                <!-- Load More Button -->
+                @if (Model.HasMoreRawData)
                 {
-                    <nav aria-label="Raw data pagination">
-                        <ul class="pagination justify-content-center">
-                            @if (Model.PageNumber > 1)
-                            {
-                                <li class="page-item">
-                                    <a class="page-link" href="?page=@(Model.PageNumber - 1)&pageSize=@Model.PageSize">Previous</a>
-                                </li>
-                            }
-
-                            @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
-                            {
-                                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
-                                    <a class="page-link" href="?page=@i&pageSize=@Model.PageSize">@i</a>
-                                </li>
-                            }
-
-                            @if (Model.PageNumber < Model.TotalPages)
-                            {
-                                <li class="page-item">
-                                    <a class="page-link" href="?page=@(Model.PageNumber + 1)&pageSize=@Model.PageSize">Next</a>
-                                </li>
-                            }
-                        </ul>
-                    </nav>
+                    <div class="text-center mt-4">
+                        <button type="button" class="btn btn-primary" onclick="loadMoreRawData()" id="loadMoreRawBtn">
+                            <i class="fas fa-plus"></i> Load More Raw Data
+                        </button>
+                        <div class="mt-2">
+                            <small class="text-muted">Showing @Model.RawOrders.Count of @Model.TotalCount records</small>
+                        </div>
+                    </div>
+                }
+                else if (Model.RawOrders.Any())
+                {
+                    <div class="text-center mt-4">
+                        <small class="text-muted">All @Model.TotalCount records loaded</small>
+                    </div>
                 }
             }
         </div>
@@ -277,6 +267,104 @@
                 copyBtn.classList.remove('btn-success');
                 copyBtn.classList.add('btn-primary');
             }, 2000);
+        }
+
+        let currentRawDataPage = 1;
+        let isLoadingRawData = false;
+
+        function loadMoreRawData() {
+            if (isLoadingRawData) return;
+            
+            isLoadingRawData = true;
+            const loadMoreBtn = document.getElementById('loadMoreRawBtn');
+            const originalText = loadMoreBtn.innerHTML;
+            loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+            loadMoreBtn.disabled = true;
+            
+            currentRawDataPage++;
+            
+            fetch(`/api/rawdata?page=${currentRawDataPage}&pageSize=@Model.PageSize`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.data && data.data.length > 0) {
+                        appendRawDataToTable(data.data);
+                        
+                        // Update the count display
+                        const currentCount = document.querySelectorAll('table tbody tr').length;
+                        const totalCount = data.pagination.totalCount;
+                        
+                        if (currentCount >= totalCount) {
+                            loadMoreBtn.style.display = 'none';
+                            document.querySelector('.text-center.mt-4').innerHTML = 
+                                '<small class="text-muted">All ' + totalCount + ' records loaded</small>';
+                        }
+                    } else {
+                        loadMoreBtn.style.display = 'none';
+                        document.querySelector('.text-center.mt-4').innerHTML = 
+                            '<small class="text-muted">All records loaded</small>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading more raw data:', error);
+                    currentRawDataPage--; // Revert page number on error
+                })
+                .finally(() => {
+                    isLoadingRawData = false;
+                    loadMoreBtn.innerHTML = originalText;
+                    loadMoreBtn.disabled = false;
+                });
+        }
+
+        function appendRawDataToTable(rawDataList) {
+            const tbody = document.querySelector('table tbody');
+            
+            rawDataList.forEach(rawData => {
+                const row = document.createElement('tr');
+                row.className = rawData.processed ? 'table-success' : '';
+                row.innerHTML = `
+                    <td>
+                        <strong>${rawData.siteName}</strong>
+                        <br>
+                        <small class="text-muted">ID: ${rawData.id.substring(0, 8)}...</small>
+                    </td>
+                    <td>
+                        <div>${new Date(rawData.receivedAt).toLocaleString()}</div>
+                        <small class="text-muted">${new Date(rawData.receivedAt).toUTCString()}</small>
+                    </td>
+                    <td>
+                        ${rawData.processed ? 
+                            `<span class="badge bg-success">Processed</span><br><small class="text-muted">${new Date(rawData.processedAt).toLocaleString()}</small>` :
+                            '<span class="badge bg-warning">Pending</span>'
+                        }
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-primary" 
+                                    onclick="viewRawData('${rawData.id}', '${rawData.siteName}')">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            ${!rawData.processed ? `
+                                <button type="button" 
+                                        class="btn btn-primary"
+                                        onclick="processOrder('${rawData.id}')">
+                                    <i class="fas fa-cogs"></i> Process Order
+                                </button>
+                                <a href="?handler=MarkProcessed&id=${rawData.id}" 
+                                   class="btn btn-outline-success"
+                                   onclick="return confirm('Mark this data as processed?')">
+                                    <i class="fas fa-check"></i> Mark Processed
+                                </a>
+                            ` : ''}
+                            <a href="?handler=Delete&id=${rawData.id}" 
+                               class="btn btn-outline-danger"
+                               onclick="return confirm('Delete this raw data? This action cannot be undone.')">
+                                <i class="fas fa-trash"></i> Delete
+                            </a>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
         }
     </script>
 }

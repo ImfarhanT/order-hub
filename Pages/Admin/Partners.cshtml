@@ -8,7 +8,7 @@
     <!-- Page Heading -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Partners Management</h1>
-        <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addPartnerModal">
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPartnerModal">
             <i class="fas fa-plus fa-sm"></i> Add New Partner
         </button>
     </div>
@@ -83,9 +83,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="addPartnerModalLabel">Add New Partner</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="partnerForm" method="post">
                 <div class="modal-body">
@@ -169,7 +167,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Partner</button>
                 </div>
             </form>
@@ -183,16 +181,14 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="deletePartnerModalLabel">Delete Partner</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete this partner? This action cannot be undone.</p>
                 <input type="hidden" id="deletePartnerId" />
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-danger" onclick="confirmDeletePartner()">Delete</button>
             </div>
         </div>
@@ -234,7 +230,8 @@
                     $('#isActive').prop('checked', partner.isActive);
                     
                     $('#addPartnerModalLabel').text('Edit Partner');
-                    $('#addPartnerModal').modal('show');
+                    var modal = new bootstrap.Modal(document.getElementById('addPartnerModal'));
+                    modal.show();
                 })
                 .catch(error => {
                     console.error('Error fetching partner:', error);
@@ -244,7 +241,8 @@
         
         function deletePartner(partnerId) {
             $('#deletePartnerId').val(partnerId);
-            $('#deletePartnerModal').modal('show');
+            var modal = new bootstrap.Modal(document.getElementById('deletePartnerModal'));
+            modal.show();
         }
         
         function confirmDeletePartner() {
@@ -273,36 +271,59 @@
             const formData = new FormData($('#partnerForm')[0]);
             const partnerData = Object.fromEntries(formData.entries());
             
-            // Handle checkbox value
-            partnerData.isActive = $('#isActive').is(':checked');
+            // Handle checkbox value and convert to proper types
+            partnerData.IsActive = $('#isActive').is(':checked');
+            
+            // Convert numeric fields
+            if (partnerData.SharePercentage) {
+                partnerData.SharePercentage = parseFloat(partnerData.SharePercentage);
+            }
             
             const partnerId = $('#partnerId').val();
             const method = partnerId ? 'PUT' : 'POST';
             const url = partnerId ? `/api/partners/${partnerId}` : '/api/partners';
+            
+            // Remove Id field for new partners (POST requests)
+            if (method === 'POST') {
+                delete partnerData.Id;
+            }
+            
+            console.log('Submitting partner data:', partnerData);
+            console.log('URL:', url);
+            console.log('Method:', method);
             
             fetch(url, {
                 method: method,
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'same-origin', // Include cookies for authentication
                 body: JSON.stringify(partnerData)
             })
             .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                
                 if (response.ok) {
-                    $('#addPartnerModal').modal('hide');
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('addPartnerModal'));
+                    modal.hide();
                     location.reload();
                 } else {
-                    alert('Error saving partner');
+                    // Get error details
+                    return response.text().then(text => {
+                        console.error('Error response:', text);
+                        alert(`Error saving partner: ${response.status} - ${text}`);
+                    });
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('Error saving partner');
+                console.error('Fetch error:', error);
+                alert('Error saving partner: ' + error.message);
             });
         }
         
         // Reset form when modal is closed
-        $('#addPartnerModal').on('hidden.bs.modal', function () {
+        document.getElementById('addPartnerModal').addEventListener('hidden.bs.modal', function () {
             $('#partnerForm')[0].reset();
             $('#partnerId').val('');
             $('#addPartnerModalLabel').text('Add New Partner');

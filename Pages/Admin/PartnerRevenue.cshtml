@@ -1,0 +1,331 @@
+@page
+@model HubApi.Pages.Admin.PartnerRevenueModel
+@{
+    ViewData["Title"] = "Partner Revenue Reports";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Partner Revenue Reports</h1>
+    </div>
+
+    <!-- Partner Selection -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Select Partner</h6>
+                </div>
+                <div class="card-body">
+                    <form id="partnerSelectForm">
+                        <div class="form-group">
+                            <label for="partnerId">Choose Partner</label>
+                            <select class="form-control" id="partnerId" name="partnerId" required>
+                                <option value="">Select a Partner</option>
+                                @foreach (var partner in Model.Partners)
+                                {
+                                    <option value="@partner.Id">@partner.Name (@partner.ShareType: @partner.SharePercentage%)</option>
+                                }
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Generate Report</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Summary -->
+    <div id="revenueSummary" class="row mb-4" style="display: none;">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Orders
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalOrders">0</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Total Revenue
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalRevenue">$0.00</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Partner Share
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="partnerShare">$0.00</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-percentage fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Assigned Sites
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="assignedSites">0</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-link fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Site Revenue Breakdown -->
+    <div id="siteBreakdown" class="row mb-4" style="display: none;">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Revenue by Site</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="siteRevenueTable">
+                            <thead>
+                                <tr>
+                                    <th>Site Name</th>
+                                    <th>Share Type</th>
+                                    <th>Share %</th>
+                                    <th>Total Orders</th>
+                                    <th>Site Revenue</th>
+                                    <th>Partner Earnings</th>
+                                </tr>
+                            </thead>
+                            <tbody id="siteRevenueBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div id="recentOrders" class="row mb-4" style="display: none;">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Orders</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="ordersTable">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Site</th>
+                                    <th>Customer</th>
+                                    <th>Order Total</th>
+                                    <th>Share Type</th>
+                                    <th>Share %</th>
+                                    <th>Partner Earnings</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#partnerSelectForm').on('submit', function(e) {
+                e.preventDefault();
+                const partnerId = $('#partnerId').val();
+                if (partnerId) {
+                    generateRevenueReport(partnerId);
+                }
+            });
+        });
+
+        function generateRevenueReport(partnerId) {
+            // Show loading state
+            $('#revenueSummary, #siteBreakdown, #recentOrders').hide();
+            
+            // Fetch partner revenue data
+            fetch(`/api/v1/sitepartners/partner/${partnerId}`)
+                .then(response => response.json())
+                .then(assignments => {
+                    if (assignments.length === 0) {
+                        alert('No site assignments found for this partner.');
+                        return;
+                    }
+
+                    // Get site IDs for this partner
+                    const siteIds = assignments.map(a => a.siteId);
+                    
+                    // Fetch orders for these sites
+                    return fetch(`/api/v1/orders/partner/${partnerId}`)
+                        .then(response => response.json())
+                        .then(orders => {
+                            displayRevenueReport(assignments, orders);
+                        });
+                })
+                .catch(error => {
+                    console.error('Error generating report:', error);
+                    alert('Error generating revenue report. Please try again.');
+                });
+        }
+
+        function displayRevenueReport(assignments, orders) {
+            const partner = assignments[0]; // Get partner info from first assignment
+            
+            // Calculate totals
+            let totalOrders = orders.length;
+            let totalRevenue = 0;
+            let totalPartnerShare = 0;
+            
+            // Process orders and calculate earnings
+            orders.forEach(order => {
+                const assignment = assignments.find(a => a.siteId === order.siteId);
+                if (assignment) {
+                    const orderTotal = parseFloat(order.orderTotal) || 0;
+                    totalRevenue += orderTotal;
+                    
+                    let partnerEarnings = 0;
+                    if (assignment.shareType === 'Revenue') {
+                        partnerEarnings = orderTotal * (assignment.sharePercentage / 100);
+                    } else if (assignment.shareType === 'Profit') {
+                        // For profit sharing, we'd need profit calculation
+                        // For now, using a simplified approach
+                        const estimatedProfit = orderTotal * 0.3; // Assume 30% profit margin
+                        partnerEarnings = estimatedProfit * (assignment.sharePercentage / 100);
+                    }
+                    
+                    totalPartnerShare += partnerEarnings;
+                }
+            });
+
+            // Update summary cards
+            $('#totalOrders').text(totalOrders);
+            $('#totalRevenue').text('$' + totalRevenue.toFixed(2));
+            $('#partnerShare').text('$' + totalPartnerShare.toFixed(2));
+            $('#assignedSites').text(assignments.length);
+
+            // Show summary
+            $('#revenueSummary').show();
+
+            // Generate site breakdown
+            generateSiteBreakdown(assignments, orders);
+
+            // Generate orders table
+            generateOrdersTable(assignments, orders);
+
+            // Show breakdown sections
+            $('#siteBreakdown, #recentOrders').show();
+        }
+
+        function generateSiteBreakdown(assignments, orders) {
+            const tbody = $('#siteRevenueBody');
+            tbody.empty();
+
+            assignments.forEach(assignment => {
+                const siteOrders = orders.filter(o => o.siteId === assignment.siteId);
+                const siteRevenue = siteOrders.reduce((sum, order) => sum + (parseFloat(order.orderTotal) || 0), 0);
+                
+                let partnerEarnings = 0;
+                if (assignment.shareType === 'Revenue') {
+                    partnerEarnings = siteRevenue * (assignment.sharePercentage / 100);
+                } else if (assignment.shareType === 'Profit') {
+                    const estimatedProfit = siteRevenue * 0.3; // Assume 30% profit margin
+                    partnerEarnings = estimatedProfit * (assignment.sharePercentage / 100);
+                }
+
+                const row = `
+                    <tr>
+                        <td>${assignment.siteName}</td>
+                        <td>${assignment.shareType}</td>
+                        <td>${assignment.sharePercentage}%</td>
+                        <td>${siteOrders.length}</td>
+                        <td>$${siteRevenue.toFixed(2)}</td>
+                        <td>$${partnerEarnings.toFixed(2)}</td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        }
+
+        function generateOrdersTable(assignments, orders) {
+            const tbody = $('#ordersBody');
+            tbody.empty();
+
+            // Sort orders by date (most recent first)
+            const sortedOrders = orders.sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt));
+
+            sortedOrders.slice(0, 50).forEach(order => { // Show last 50 orders
+                const assignment = assignments.find(a => a.siteId === order.siteId);
+                if (assignment) {
+                    const orderTotal = parseFloat(order.orderTotal) || 0;
+                    let partnerEarnings = 0;
+                    
+                    if (assignment.shareType === 'Revenue') {
+                        partnerEarnings = orderTotal * (assignment.sharePercentage / 100);
+                    } else if (assignment.shareType === 'Profit') {
+                        const estimatedProfit = orderTotal * 0.3;
+                        partnerEarnings = estimatedProfit * (assignment.sharePercentage / 100);
+                    }
+
+                    const row = `
+                        <tr>
+                            <td>${order.wcOrderId}</td>
+                            <td>${assignment.siteName}</td>
+                            <td>${order.customerName}</td>
+                            <td>$${orderTotal.toFixed(2)}</td>
+                            <td>${assignment.shareType}</td>
+                            <td>${assignment.sharePercentage}%</td>
+                            <td>$${partnerEarnings.toFixed(2)}</td>
+                            <td>${new Date(order.placedAt).toLocaleDateString()}</td>
+                        </tr>
+                    `;
+                    tbody.append(row);
+                }
+            });
+        }
+    </script>
+}
+

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using HubApi.Data;
 using HubApi.Models;
+using System;
 
 namespace HubApi.Pages.Admin;
 
@@ -18,30 +19,34 @@ public class OrdersV2Model : PageModel
     }
 
     public List<OrderV2ViewModel> Orders { get; set; } = new List<OrderV2ViewModel>();
-    public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 20;
-    public int TotalPages { get; set; }
     public int TotalCount { get; set; }
+    public bool HasMoreOrders => Orders.Count < TotalCount;
+    public int CurrentPage { get; set; } = 1;
+    public int TotalPages { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int? page, int? pageSize)
     {
         try
         {
-            PageNumber = page ?? 1;
             PageSize = pageSize ?? 20;
+            
+            _logger.LogInformation("OrdersV2 OnGetAsync called with pageSize={PageSize}", PageSize);
 
             // Get total count
             TotalCount = await _context.OrdersV2.CountAsync();
+            
+            // Calculate total pages
             TotalPages = (int)Math.Ceiling((double)TotalCount / PageSize);
+            CurrentPage = page ?? 1;
 
-            // Get orders with pagination
+            // Always load the first page initially
             var ordersQuery = _context.OrdersV2
                 .Include(o => o.Site)
                 .Include(o => o.OrderItems)
                 .OrderByDescending(o => o.SyncedAt);
 
             var orders = await ordersQuery
-                .Skip((PageNumber - 1) * PageSize)
                 .Take(PageSize)
                 .ToListAsync();
 

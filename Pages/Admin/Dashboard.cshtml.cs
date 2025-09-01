@@ -32,7 +32,10 @@ public class DashboardModel : PageModel
         ActivePartners = await _context.Partners.CountAsync();
 
         // Get all orders for revenue calculation (fetch first, then calculate in memory)
-        var allOrders = await _context.OrdersV2.ToListAsync();
+        // Exclude cancelled and refunded orders from revenue calculations
+        var allOrders = await _context.OrdersV2
+            .Where(o => o.Status.ToLower() != "cancelled" && o.Status.ToLower() != "refunded")
+            .ToListAsync();
         TotalRevenue = allOrders.Sum(o => decimal.Parse(o.OrderTotal));
 
         // Get recent orders
@@ -79,7 +82,7 @@ public class DashboardModel : PageModel
             })
             .ToListAsync();
 
-        // Calculate site revenues in memory
+        // Calculate site revenues in memory (excluding cancelled and refunded orders)
         foreach (var stat in SiteStats)
         {
             var siteOrders = allOrders.Where(o => o.SiteId == _context.Sites.First(s => s.Name == stat.SiteName).Id);

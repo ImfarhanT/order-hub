@@ -1,0 +1,1645 @@
+@page
+@model HubApi.Pages.Admin.ProfitManagementModel
+@{
+    ViewData["Title"] = "Profit Management";
+}
+
+<!-- Bootstrap CSS and JS CDN -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Font Awesome for better icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    /* Modern Profit Management Styles */
+    .profit-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .metric-card {
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--card-color) 0%, var(--card-color-light) 100%);
+    }
+    
+    .metric-card.primary { --card-color: #4e73df; --card-color-light: #6f86e5; }
+    .metric-card.danger { --card-color: #e74a3b; --card-color-light: #f06a5c; }
+    .metric-card.success { --card-color: #1cc88a; --card-color-light: #36e9a8; }
+    .metric-card.info { --card-color: #36b9cc; --card-color-light: #5cd6e8; }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        background: linear-gradient(135deg, var(--card-color) 0%, var(--card-color-light) 100%);
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        margin: 0;
+    }
+    
+    .chart-card {
+        background: white;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .chart-card .card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 15px 15px 0 0;
+        padding: 1.25rem;
+    }
+    
+    .chart-card .card-header h6 {
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .table-modern {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .table-modern th {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: none;
+        font-weight: 600;
+        color: #495057;
+        padding: 1rem;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .table-modern td {
+        padding: 1rem;
+        border: none;
+        border-bottom: 1px solid #f1f3f4;
+        vertical-align: middle;
+    }
+    
+    .table-modern tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .payout-status {
+        padding: 0.4rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .payout-status.paid { background-color: #d4edda; color: #155724; }
+    .payout-status.processing { background-color: #fff3cd; color: #856404; }
+    .payout-status.refunded { background-color: #f8d7da; color: #721c24; }
+    
+    .profit-positive { color: #1cc88a; font-weight: 700; }
+    .profit-negative { color: #e74a3b; font-weight: 700; }
+    .profit-neutral { color: #6c757d; font-weight: 700; }
+    
+    .filter-card {
+        background: white;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .filter-card .card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 15px 15px 0 0;
+        padding: 1.25rem;
+    }
+    
+    .form-control {
+        border-radius: 10px;
+        border: 1px solid #dee2e6;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+    
+    .btn-modern {
+        border-radius: 10px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .modal-content {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .modal-header {
+        background: linear-gradient(135deg, #4e73df 0%, #6f86e5 100%);
+        color: white;
+        border-radius: 15px 15px 0 0;
+        border-bottom: none;
+    }
+    
+    .modal-title {
+        font-weight: 700;
+    }
+    
+    .btn-close {
+        filter: invert(1);
+    }
+    
+    .profit-summary {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .profit-summary h6 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .profit-summary .row {
+        margin-bottom: 1rem;
+    }
+    
+    .profit-summary .col-md-4 {
+        text-align: center;
+    }
+    
+    .profit-summary .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .profit-summary .label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    @@media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+        }
+        
+        .profit-header {
+            padding: 1.5rem 0;
+        }
+        
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+    }
+</style>
+
+<!-- Enhanced Profit Management Header -->
+<div class="profit-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-chart-line me-3"></i>Profit Management System
+                </h1>
+                <p class="mb-0 opacity-75">Comprehensive profit tracking and analysis with payout status management</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="d-flex align-items-center justify-content-end">
+                    <div class="me-3">
+                        <small class="d-block opacity-75">Last Updated</small>
+                        <strong id="lastUpdated">@DateTime.Now.ToString("MMM dd, yyyy HH:mm")</strong>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                        <i class="fas fa-clock fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Enhanced Profit Summary Cards -->
+    <div class="stats-grid">
+        <div class="metric-card primary">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="metric-label">Total Revenue</p>
+                        <h3 class="metric-value" id="totalRevenue">$0.00</h3>
+                        <div class="trend-indicator trend-up">
+                            <i class="fas fa-arrow-up me-1"></i>All Orders
+                        </div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card danger">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="metric-label">Total Costs</p>
+                        <h3 class="metric-value" id="totalCosts">$0.00</h3>
+                        <div class="trend-indicator trend-down">
+                            <i class="fas fa-arrow-down me-1"></i>Expenses
+                        </div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="fas fa-minus-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card success">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="metric-label">Net Profit</p>
+                        <h3 class="metric-value" id="netProfit">$0.00</h3>
+                        <div class="trend-indicator trend-up">
+                            <i class="fas fa-arrow-up me-1"></i>Earnings
+                        </div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card info">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="metric-label">Avg Profit Margin</p>
+                        <h3 class="metric-value" id="avgMargin">0%</h3>
+                        <div class="trend-indicator trend-up">
+                            <i class="fas fa-percentage me-1"></i>Efficiency
+                        </div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Filters -->
+    <div class="filter-card">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Advanced Filters & Search</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="siteFilter" class="form-label fw-bold">Site</label>
+                        <select class="form-control" id="siteFilter">
+                            <option value="">All Sites</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="searchFilter" class="form-label fw-bold">Search</label>
+                        <input type="text" class="form-control" id="searchFilter" placeholder="Order ID or Customer">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="statusFilter" class="form-label fw-bold">Order Status</label>
+                        <select class="form-control" id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="processing">Processing</option>
+                            <option value="completed">Completed</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="refunded">Refunded</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="payoutFilter" class="form-label fw-bold">Payout Status</label>
+                        <select class="form-control" id="payoutFilter">
+                            <option value="">All Payouts</option>
+                            <option value="paid">Paid</option>
+                            <option value="processing">Processing</option>
+                            <option value="refunded">Refunded</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="profitFilter" class="form-label fw-bold">Profit Status</label>
+                        <select class="form-control" id="profitFilter">
+                            <option value="">All Profits</option>
+                            <option value="calculated">Calculated</option>
+                            <option value="not_calculated">Not Calculated</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="button" class="btn btn-primary btn-modern w-100" onclick="loadOrders()">
+                            <i class="fas fa-search me-2"></i>Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profit Analytics Charts -->
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="chart-card">
+                <div class="card-header">
+                    <h6><i class="fas fa-chart-pie me-2"></i>Payout Status Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="payoutStatusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Orders Table -->
+    <div class="chart-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6><i class="fas fa-list me-2"></i>Orders & Profit Analysis</h6>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="exportToCSV()">
+                    <i class="fas fa-download me-1"></i>Export CSV
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-info" onclick="refreshData()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleAutoRefresh()" id="autoRefreshBtn">
+                    <i class="fas fa-clock me-1"></i>Auto Refresh
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-modern mb-0" id="ordersTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Order Details</th>
+                            <th>Site & Customer</th>
+                            <th>Financial Summary</th>
+                            <th>Profit Analysis</th>
+                            <th>Payout Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        <!-- Orders will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                <div>
+                    <span id="totalOrders" class="fw-bold">0</span> orders found
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="previousPage()">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span class="mx-2">Page <span id="currentPage" class="fw-bold">1</span> of <span id="totalPages" class="fw-bold">1</span></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="nextPage()">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Profit Calculation Modal -->
+<div class="modal fade" id="profitModal" tabindex="-1" role="dialog" aria-labelledby="profitModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="profitModalLabel">
+                    <i class="fas fa-calculator me-2"></i>Calculate Order Profit
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="profitForm">
+                    <input type="hidden" id="profitOrderId">
+                    
+                    <!-- Order Information -->
+                    <div class="profit-summary">
+                        <h6><i class="fas fa-info-circle me-2"></i>Order Information</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="value" id="profitWcOrderId">#0000</div>
+                                <div class="label">WooCommerce Order ID</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="value" id="profitOrderTotal">$0.00</div>
+                                <div class="label">Order Total</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="value" id="profitOrderStatus">Processing</div>
+                                <div class="label">Order Status</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="profitProductCost" class="form-label fw-bold">Product Cost ($)</label>
+                                <input type="number" class="form-control" id="profitProductCost" step="0.01" min="0" required>
+                                <small class="form-text text-muted">Actual cost of products in this order</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="profitGatewayCostPercentage" class="form-label fw-bold">Gateway Cost (%)</label>
+                                <input type="number" class="form-control" id="profitGatewayCostPercentage" step="0.01" min="0" max="100" required>
+                                <small class="form-text text-muted">Percentage of order total for payment processing</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="profitPayoutStatus" class="form-label fw-bold">Payout Status</label>
+                                <select class="form-control" id="profitPayoutStatus" required>
+                                    <option value="processing">Processing</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="refunded">Refunded</option>
+                                </select>
+                                <small class="form-text text-muted">Current payout status affects profit calculation</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="profitOperationalCost" class="form-label fw-bold">Operational Cost</label>
+                                <input type="text" class="form-control" id="profitOperationalCost" value="$5.00" readonly>
+                                <small class="form-text text-muted">Fixed cost per order</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="profitPayoutDate" class="form-label fw-bold">Payout Date</label>
+                                <input type="date" class="form-control" id="profitPayoutDate">
+                                <small class="form-text text-muted">When payment was received (for paid orders)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="profitNotes" class="form-label fw-bold">Notes</label>
+                        <textarea class="form-control" id="profitNotes" rows="3" placeholder="Additional notes about this order..."></textarea>
+                    </div>
+
+                    <!-- Profit Calculation Summary -->
+                    <div class="profit-summary">
+                        <h6><i class="fas fa-calculator me-2"></i>Profit Calculation Summary</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="value" id="profitTotalCosts">$0.00</div>
+                                <div class="label">Total Costs</div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="value" id="profitNetProfit">$0.00</div>
+                                <div class="label">Net Profit</div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="value" id="profitMargin">0%</div>
+                                <div class="label">Profit Margin</div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="value" id="profitStatus">Processing</div>
+                                <div class="label">Status Impact</div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-modern" onclick="calculateAndSaveProfit()" id="profitCalculateBtn">
+                    <i class="fas fa-calculator"></i> Calculate & Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="orderDetailsModalLabel">
+                    <i class="fas fa-eye me-2"></i>Order Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    let pageSize = 20;
+    let totalPages = 1;
+    let totalOrders = 0;
+    // Global chart variables
+    let payoutStatusChart = null;
+    let autoRefreshInterval = null;
+    let isAutoRefreshEnabled = false;
+
+    $(document).ready(function() {
+        console.log('Profit Management page loaded, initializing...');
+        
+        // Show loading state
+        $('#ordersTableBody').html(`
+            <tr>
+                <td colspan="6" class="text-center py-5">
+                    <div class="text-muted">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mb-0 fs-5">Loading orders...</p>
+                        <small>Please wait while we fetch your data</small>
+                    </div>
+                </td>
+            </tr>
+        `);
+        
+        // Initialize everything
+        loadSites();
+        initializeCharts();
+        
+        // Load data after charts are initialized
+        setTimeout(() => {
+            loadOrders();
+            loadProfitStats();
+        }, 1500); // Increased delay to ensure charts are ready
+        
+        // Real-time calculation
+        $('#profitProductCost, #profitGatewayCostPercentage, #profitPayoutStatus').on('input change', calculateProfit);
+        
+        // Update last updated time
+        updateLastUpdated();
+        
+        // Auto-refresh logic
+        toggleAutoRefresh();
+        
+        console.log('Initialization complete');
+    });
+
+    function updateLastUpdated() {
+        const now = new Date();
+        document.getElementById('lastUpdated').textContent = now.toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function initializeCharts() {
+        console.log('Initializing charts...');
+        
+        // Wait for Chart.js to be available with multiple retries
+        let retryCount = 0;
+        const maxRetries = 10;
+        
+        function tryInitialize() {
+            if (typeof Chart === 'undefined') {
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    console.log(`Chart.js not available, retry ${retryCount}/${maxRetries} in 200ms...`);
+                    setTimeout(tryInitialize, 200);
+                    return;
+                } else {
+                    console.error('Chart.js failed to load after multiple retries');
+                    return;
+                }
+            }
+            
+            console.log('Chart.js available, creating charts...');
+            
+            try {
+                // Initialize Payout Status Chart
+                const payoutCtx = document.getElementById('payoutStatusChart');
+                if (payoutCtx) {
+                    // Destroy existing chart if it exists
+                    if (payoutStatusChart) {
+                        payoutStatusChart.destroy();
+                    }
+                    
+                    payoutStatusChart = new Chart(payoutCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Processing', 'Paid', 'Refunded'],
+                            datasets: [{
+                                data: [1, 1, 1], // Start with non-zero values to make chart visible
+                                backgroundColor: [
+                                    'rgba(255, 206, 86, 0.8)',
+                                    'rgba(75, 192, 192, 0.8)',
+                                    'rgba(255, 99, 132, 0.8)'
+                                ],
+                                borderColor: [
+                                    'rgba(255, 206, 86, 1)',
+                                    'rgba(75, 192, 192, 1)',
+                                    'rgba(255, 99, 132, 1)'
+                                ],
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Order Payout Status'
+                                }
+                            }
+                        }
+                    });
+                    console.log('Payout chart initialized successfully');
+                } else {
+                    console.error('Payout chart canvas not found');
+                }
+                
+                console.log('All charts initialized successfully');
+                
+                // Test charts immediately
+                setTimeout(() => {
+                    testCharts();
+                }, 500);
+                
+            } catch (error) {
+                console.error('Error initializing charts:', error);
+            }
+        }
+        
+        tryInitialize();
+    }
+
+    function loadSites() {
+        fetch('/api/v1/sites')
+            .then(response => response.json())
+            .then(sites => {
+                const siteFilter = $('#siteFilter');
+                sites.forEach(site => {
+                    siteFilter.append(`<option value="${site.id}">${site.name}</option>`);
+                });
+            })
+            .catch(error => console.error('Error loading sites:', error));
+    }
+
+    function loadOrders() {
+        const siteId = $('#siteFilter').val();
+        const search = $('#searchFilter').val();
+        const status = $('#statusFilter').val();
+        const payoutStatus = $('#payoutFilter').val();
+
+        let url = `/api/v1/profit?page=${currentPage}&pageSize=${pageSize}`;
+        if (siteId) url += `&siteId=${siteId}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        if (status) url += `&status=${encodeURIComponent(status)}`;
+        if (payoutStatus) url += `&payoutStatus=${encodeURIComponent(payoutStatus)}`;
+
+        console.log('Loading orders from:', url);
+
+        fetch(url)
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                totalOrders = parseInt(response.headers.get('X-Total-Count') || '0');
+                totalPages = Math.ceil(totalOrders / pageSize);
+                currentPage = parseInt(response.headers.get('X-Page') || '1');
+                
+                console.log('Pagination info:', { totalOrders, totalPages, currentPage });
+                
+                $('#totalOrders').text(totalOrders);
+                $('#currentPage').text(currentPage);
+                $('#totalPages').text(totalPages);
+                
+                return response.json();
+            })
+            .then(orders => {
+                console.log('Raw orders data:', orders);
+                console.log('Orders type:', typeof orders);
+                console.log('Orders length:', orders ? orders.length : 'undefined');
+                
+                if (Array.isArray(orders)) {
+                    displayOrders(orders);
+                } else {
+                    console.error('Orders is not an array:', orders);
+                    showAlert('Error: Invalid data format received from server', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading orders:', error);
+                showAlert('Error loading orders: ' + error.message, 'danger');
+            });
+    }
+
+    function displayOrders(orders) {
+        const tbody = $('#ordersTableBody');
+        tbody.empty();
+
+        console.log('Displaying orders:', orders);
+
+        if (!orders || orders.length === 0) {
+            tbody.html(`
+                <tr>
+                    <td colspan="6" class="text-center py-5">
+                        <div class="text-muted">
+                            <i class="fas fa-inbox fa-3x mb-3 opacity-50"></i>
+                            <p class="mb-0 fs-5">No orders found</p>
+                            <small>Try adjusting your filters or search criteria</small>
+                        </div>
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
+        orders.forEach((order, index) => {
+            console.log(`Processing order ${index}:`, order);
+            
+            // Handle different possible field names from API
+            const orderId = order.Id || order.OrderId || order.id || order.orderId || `unknown-${index}`;
+            console.log(`Order ${index} - Raw order:`, order);
+            console.log(`Order ${index} - Extracted orderId:`, orderId);
+            const wcOrderId = order.WcOrderId || order.wcOrderId || order.wc_order_id || 'N/A';
+            const siteName = order.SiteName || order.siteName || order.site_name || 'Unknown Site';
+            const customerName = order.CustomerName || order.customerName || order.customer_name || 'N/A';
+            const orderTotal = order.OrderTotal || order.orderTotal || order.order_total || 0;
+            const orderStatus = order.Status || order.status || 'Unknown';
+            
+            // Handle null profit data for orders without profit calculations
+            const hasProfit = order.ProfitId && order.IsCalculated;
+            const productCost = order.ProductCost || order.productCost || order.product_cost || 0;
+            const gatewayCost = order.GatewayCost || order.gatewayCost || order.gateway_cost || 0;
+            const operationalCost = order.OperationalCost || order.operationalCost || order.operational_cost || 0;
+            const totalCosts = order.TotalCosts || order.totalCosts || order.total_costs || 0;
+            const netProfit = order.NetProfit || order.netProfit || order.net_profit || 0;
+            const profitMargin = order.ProfitMargin || order.profitMargin || order.profit_margin || 0;
+            const payoutStatus = order.PayoutStatus || order.payoutStatus || order.payout_status || 'processing';
+            const payoutDate = order.PayoutDate || order.payoutDate || order.payout_date;
+            const notes = order.Notes || order.notes || '';
+            
+            // Safely handle OrderId
+            const orderIdShort = typeof orderId === 'string' && orderId.length > 8 ? orderId.substring(0, 8) : orderId;
+            
+            const row = `
+                <tr>
+                    <td>
+                        <div>
+                            <strong class="text-primary">#${wcOrderId}</strong><br>
+                            <small class="text-muted">ID: ${orderIdShort}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <span class="badge bg-primary mb-1">${siteName}</span><br>
+                            <small class="text-muted">${customerName}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <div class="fw-bold text-success">$${parseFloat(orderTotal).toFixed(2)}</div>
+                            <small class="text-muted">
+                                ${hasProfit ? `
+                                    Cost: $${parseFloat(productCost).toFixed(2)}<br>
+                                    Gateway: $${parseFloat(gatewayCost).toFixed(2)}<br>
+                                    Ops: $${parseFloat(operationalCost).toFixed(2)}
+                                ` : 'Profit not calculated yet'}
+                            </small>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            ${hasProfit ? `
+                                <div class="fw-bold ${netProfit >= 0 ? 'profit-positive' : 'profit-negative'}">
+                                    $${parseFloat(netProfit).toFixed(2)}
+                                </div>
+                                <small class="text-muted">
+                                    Margin: ${parseFloat(profitMargin).toFixed(1)}%<br>
+                                    <span class="badge bg-success">Calculated</span>
+                                </small>
+                            ` : `
+                                <div class="text-muted">Not calculated</div>
+                                <small class="text-muted">
+                                    <span class="badge bg-warning">Click Calculate</span>
+                                </small>
+                            `}
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <span class="payout-status ${payoutStatus}">${payoutStatus}</span><br>
+                            <small class="text-muted">
+                                ${payoutDate ? new Date(payoutDate).toLocaleDateString() : 'Pending'}
+                            </small>
+                            <div class="mt-1">
+                                <select class="form-select form-select-sm" onchange="updatePayoutStatus('${orderId}', this.value)">
+                                    <option value="processing" ${payoutStatus === 'processing' ? 'selected' : ''}>Processing</option>
+                                    <option value="paid" ${payoutStatus === 'paid' ? 'selected' : ''}>Paid</option>
+                                    <option value="refunded" ${payoutStatus === 'refunded' ? 'selected' : ''}>Refunded</option>
+                                </select>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="openProfitModal('${orderId}', '${wcOrderId}', '${orderTotal}', '${payoutStatus}')">
+                                <i class="fas fa-calculator"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="viewOrderDetails('${orderId}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+
+        // Update payout status chart with real data
+        updatePayoutStatusChart(orders);
+    }
+
+    function updatePayoutStatusChart(orders) {
+        console.log('Updating payout status chart with orders:', orders);
+        
+        if (!payoutStatusChart) {
+            console.warn('Payout chart not initialized, attempting to initialize...');
+            // Try to initialize charts if they're not ready
+            setTimeout(() => {
+                if (!payoutStatusChart) {
+                    console.log('Charts still not ready, initializing now...');
+                    initializeCharts();
+                    // Wait a bit more then try to update again
+                    setTimeout(() => {
+                        if (payoutStatusChart) {
+                            updatePayoutStatusChart(orders);
+                        }
+                    }, 1000);
+                }
+            }, 500);
+            return;
+        }
+        
+        // Count payout statuses from orders
+        let processingCount = 0;
+        let paidCount = 0;
+        let refundedCount = 0;
+        
+        orders.forEach(order => {
+            const payoutStatus = order.PayoutStatus || order.payoutStatus || 'processing';
+            switch (payoutStatus.toLowerCase()) {
+                case 'processing':
+                    processingCount++;
+                    break;
+                case 'paid':
+                    paidCount++;
+                    break;
+                case 'refunded':
+                    refundedCount++;
+                    break;
+                default:
+                    processingCount++;
+                    break;
+            }
+        });
+        
+        console.log('Payout counts:', { processingCount, paidCount, refundedCount });
+        
+        // Update chart data
+        payoutStatusChart.data.datasets[0].data = [processingCount, paidCount, refundedCount];
+        payoutStatusChart.update('none');
+        console.log('Payout chart updated successfully');
+    }
+
+    function openProfitModal(orderId, wcOrderId, orderTotal, payoutStatus = 'processing') {
+        $('#profitOrderId').val(orderId);
+        $('#profitWcOrderId').text('#' + wcOrderId);
+        $('#profitOrderTotal').text('$' + parseFloat(orderTotal).toFixed(2));
+        $('#profitPayoutStatus').val(payoutStatus);
+        
+        // Check if profit already calculated
+        fetch(`/api/v1/profit/${orderId}`)
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                return null;
+            })
+            .then(profit => {
+                if (profit) {
+                    $('#profitProductCost').val(profit.productCost);
+                    $('#profitGatewayCostPercentage').val(profit.gatewayCostPercentage);
+                    $('#profitOperationalCost').val('$5.00');
+                    $('#profitNotes').val(profit.notes);
+                    $('#profitPayoutStatus').val(profit.payoutStatus || 'processing');
+                    if (profit.payoutDate) {
+                        $('#profitPayoutDate').val(profit.payoutDate.split('T')[0]);
+                    }
+                } else {
+                    $('#profitProductCost').val('');
+                    $('#profitGatewayCostPercentage').val('');
+                    $('#profitOperationalCost').val('$5.00');
+                    $('#profitNotes').val('');
+                    $('#profitPayoutDate').val('');
+                }
+                calculateProfit();
+                const profitModal = new bootstrap.Modal(document.getElementById('profitModal'));
+                profitModal.show();
+            })
+            .catch(error => {
+                console.error('Error checking existing profit:', error);
+                const profitModal = new bootstrap.Modal(document.getElementById('profitModal'));
+                profitModal.show();
+            });
+    }
+
+    function calculateProfit() {
+        const productCost = parseFloat($('#profitProductCost').val()) || 0;
+        const gatewayCostPercentage = parseFloat($('#profitGatewayCostPercentage').val()) || 0;
+        const orderTotal = parseFloat($('#profitOrderTotal').text().replace('$', '')) || 0;
+        const operationalCost = 5.00;
+        const payoutStatus = $('#profitPayoutStatus').val();
+
+        const gatewayCost = orderTotal * (gatewayCostPercentage / 100);
+        const totalCosts = productCost + gatewayCost + operationalCost;
+        
+        let netProfit, profitMargin, statusImpact;
+        
+        // Calculate profit based on payout status
+        switch (payoutStatus) {
+            case 'paid':
+                netProfit = orderTotal - totalCosts;
+                profitMargin = orderTotal > 0 ? (netProfit / orderTotal) * 100 : 0;
+                statusImpact = 'Full profit calculation';
+                break;
+            case 'processing':
+                netProfit = -(gatewayCost + productCost);
+                profitMargin = 0;
+                statusImpact = 'Potential loss (processing)';
+                break;
+            case 'refunded':
+                netProfit = -(orderTotal + gatewayCost + productCost);
+                profitMargin = -100;
+                statusImpact = 'Complete loss (refunded)';
+                break;
+            default:
+                netProfit = -(gatewayCost + productCost);
+                profitMargin = 0;
+                statusImpact = 'Processing status';
+                break;
+        }
+
+        $('#profitTotalCosts').text('$' + totalCosts.toFixed(2));
+        $('#profitNetProfit').text('$' + netProfit.toFixed(2));
+        $('#profitMargin').text(profitMargin.toFixed(1) + '%');
+        $('#profitStatus').text(statusImpact);
+
+        // Color coding
+        if (netProfit < 0) {
+            $('#profitNetProfit').removeClass('profit-positive profit-neutral').addClass('profit-negative');
+            $('#profitMargin').removeClass('profit-positive profit-neutral').addClass('profit-negative');
+        } else if (netProfit === 0) {
+            $('#profitNetProfit').removeClass('profit-positive profit-negative').addClass('profit-neutral');
+            $('#profitMargin').removeClass('profit-positive profit-negative').addClass('profit-neutral');
+        } else {
+            $('#profitNetProfit').removeClass('profit-negative profit-neutral').addClass('profit-positive');
+            $('#profitMargin').removeClass('profit-negative profit-neutral').addClass('profit-positive');
+        }
+
+        // Update payout date field visibility
+        if (payoutStatus === 'paid') {
+            $('#profitPayoutDate').closest('.form-group').show();
+        } else {
+            $('#profitPayoutDate').closest('.form-group').hide();
+        }
+    }
+
+    function calculateAndSaveProfit() {
+        const orderId = $('#profitOrderId').val();
+        const productCost = parseFloat($('#profitProductCost').val()) || 0;
+        const gatewayCostPercentage = parseFloat($('#profitGatewayCostPercentage').val()) || 0;
+        const payoutStatus = $('#profitPayoutStatus').val();
+        
+        if (!orderId) {
+            showAlert('Please select an order first', 'warning');
+            return;
+        }
+        
+        if (productCost < 0) {
+            showAlert('Product cost cannot be negative', 'warning');
+            return;
+        }
+        
+        if (gatewayCostPercentage < 0 || gatewayCostPercentage > 100) {
+            showAlert('Gateway cost percentage must be between 0 and 100', 'warning');
+            return;
+        }
+        
+        // Show loading state
+        $('#profitCalculateBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Calculating...');
+        
+        const requestData = {
+            orderId: orderId,
+            productCost: productCost,
+            gatewayCostPercentage: gatewayCostPercentage,
+            payoutStatus: payoutStatus,
+            notes: $('#profitNotes').val() || ''
+        };
+        
+        console.log('Sending profit calculation request:', requestData);
+        
+        fetch('/api/v1/profit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(async response => {
+            console.log('Profit calculation response status:', response.status);
+            
+            // For 400 errors, try to get detailed error message
+            if (response.status === 400) {
+                const errorText = await response.text();
+                console.log('400 Error response body:', errorText);
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    throw new Error(`Validation error: ${errorJson.error || errorJson.message || 'Invalid request data'}`);
+                } catch (parseError) {
+                    throw new Error(`Bad request: ${errorText}`);
+                }
+            }
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(result => {
+            console.log('Profit calculation result:', result);
+            
+            if (result.success) {
+                showAlert('Profit calculated and saved successfully!', 'success');
+                
+                // Update the profit display
+                $('#profitNetProfit').text(`$${parseFloat(result.data.netProfit).toFixed(2)}`);
+                $('#profitProfitMargin').text(`${parseFloat(result.data.profitMargin).toFixed(1)}%`);
+                $('#profitTotalCosts').text(`$${parseFloat(result.data.totalCosts).toFixed(2)}`);
+                
+                // Close modal
+                $('#profitModal').modal('hide');
+                
+                // Refresh data
+                setTimeout(() => {
+                    loadOrders();
+                    loadProfitStats();
+                }, 500);
+            } else {
+                const errorMessage = result.error || result.message || 'Unknown error occurred';
+                showAlert(`Error saving profit calculation: ${errorMessage}`, 'danger');
+                console.error('Profit calculation failed:', result);
+            }
+        })
+        .catch(error => {
+            console.error('Error calculating profit:', error);
+            const errorMessage = error.message || 'Network error occurred';
+            showAlert(`Error saving profit calculation: ${errorMessage}`, 'danger');
+        })
+        .finally(() => {
+            // Reset button state
+            $('#profitCalculateBtn').prop('disabled', false).html('<i class="fas fa-calculator"></i> Calculate & Save');
+        });
+    }
+
+    function loadProfitStats() {
+        console.log('Loading profit stats...');
+        
+        fetch('/api/v1/profit/stats')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(stats => {
+                console.log('Profit stats received:', stats);
+                
+                $('#totalRevenue').text('$' + parseFloat(stats.total_revenue || 0).toFixed(2));
+                $('#totalCosts').text('$' + parseFloat(stats.total_costs || 0).toFixed(2));
+                $('#netProfit').text('$' + parseFloat(stats.total_profit || 0).toFixed(2));
+                $('#avgMargin').text(parseFloat(stats.average_profit_margin || 0).toFixed(2) + '%');
+                
+                // Update charts if they exist
+                if (payoutStatusChart) {
+                    console.log('Payout chart exists, updating...');
+                    updateCharts(stats);
+                } else {
+                    console.log('Charts not ready yet:', { payoutStatusChart: !!payoutStatusChart });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading profit stats:', error);
+                showAlert('Error loading profit statistics', 'danger');
+            });
+    }
+
+    function updateCharts(stats) {
+        console.log('Updating charts with stats:', stats);
+        
+        // Update payout status chart with real data
+        if (payoutStatusChart) {
+            // The payout status chart will be updated by updatePayoutStatusChart when orders load
+            console.log('Payout chart exists, will be updated when orders load');
+        }
+        
+        // Update profit chart with current profit vs costs
+        // The profit chart was removed, so this section is no longer relevant.
+        // If profit chart functionality is re-added, this section will need to be re-evaluated.
+        
+        console.log('Charts update completed');
+    }
+
+    function updateChart(period) {
+        // Update chart buttons
+        document.querySelectorAll('.btn-group .btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        // Here you would typically fetch new data based on the period
+        console.log('Chart period updated to:', period);
+    }
+
+    function viewOrderDetails(orderId) {
+        console.log('Viewing order details for:', orderId);
+        
+        // Show loading state
+        $('#orderDetailsModal .modal-body').html(`
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading order details...</p>
+            </div>
+        `);
+        
+        // Fetch order details
+        fetch(`/api/v1/profit/${orderId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(order => {
+                console.log('Order details received:', order);
+                displayOrderDetails(order);
+            })
+            .catch(error => {
+                console.error('Error fetching order details:', error);
+                $('#orderDetailsModal .modal-body').html(`
+                    <div class="alert alert-danger">
+                        <h5>Error Loading Order Details</h5>
+                        <p>${error.message}</p>
+                        <small>Please try again or contact support if the issue persists.</small>
+                    </div>
+                `);
+            });
+        
+        // Show the modal
+        const orderDetailsModal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+        orderDetailsModal.show();
+    }
+    
+    function displayOrderDetails(order) {
+        const modalBody = $('#orderDetailsModal .modal-body');
+        
+        if (!order) {
+            modalBody.html(`
+                <div class="alert alert-warning">
+                    <h5>No Order Data Found</h5>
+                    <p>This order doesn't have profit calculations yet. Use the Calculate button to create profit calculations first.</p>
+                </div>
+            `);
+            return;
+        }
+        
+        const modalContent = `
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Order Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Order ID:</label>
+                                <div class="text-break">${order.orderId || order.OrderId || 'N/A'}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">WooCommerce Order:</label>
+                                <div class="text-break">#${order.wcOrderId || order.WcOrderId || 'N/A'}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Site:</label>
+                                <div class="text-break">${order.siteName || order.SiteName || 'N/A'}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Order Total:</label>
+                                <div class="h5 text-success mb-0">$${parseFloat(order.orderTotal || order.OrderTotal || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Status:</label>
+                                <div class="text-break">${order.status || order.Status || 'N/A'}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Profit Analysis</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Product Cost:</label>
+                                <div class="h6 text-danger mb-0">$${parseFloat(order.productCost || order.ProductCost || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Gateway Cost:</label>
+                                <div class="h6 text-warning mb-0">$${parseFloat(order.gatewayCost || order.GatewayCost || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Operational Cost:</label>
+                                <div class="h6 text-info mb-0">$${parseFloat(order.operationalCost || order.OperationalCost || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Total Costs:</label>
+                                <div class="h6 text-danger mb-0">$${parseFloat(order.totalCosts || order.TotalCosts || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Net Profit:</label>
+                                <div class="h5 ${parseFloat(order.netProfit || order.NetProfit || 0) >= 0 ? 'text-success' : 'text-danger'} mb-0">
+                                    $${parseFloat(order.netProfit || order.NetProfit || 0).toFixed(2)}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Profit Margin:</label>
+                                <div class="h6 ${parseFloat(order.profitMargin || order.ProfitMargin || 0) >= 0 ? 'text-success' : 'text-danger'} mb-0">
+                                    ${parseFloat(order.profitMargin || order.ProfitMargin || 0).toFixed(1)}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-credit-card me-2"></i>Payout Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="fw-bold text-muted">Payout Status:</label>
+                                        <div class="mt-1">
+                                            <span class="payout-status ${order.payoutStatus || order.PayoutStatus || 'processing'}">
+                                                ${(order.payoutStatus || order.PayoutStatus || 'processing').toUpperCase()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="fw-bold text-muted">Payout Date:</label>
+                                        <div class="text-break">
+                                            ${order.payoutDate || order.PayoutDate ? 
+                                                new Date(order.payoutDate || order.PayoutDate).toLocaleDateString() + ' ' + 
+                                                new Date(order.payoutDate || order.PayoutDate).toLocaleTimeString() : 
+                                                'Not set'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Notes:</label>
+                                <div class="text-break">
+                                    ${order.notes || order.Notes || 'No notes available'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-clock me-2"></i>Timestamps</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="fw-bold text-muted">Created:</label>
+                                        <div class="text-break">
+                                            ${order.createdAt || order.CreatedAt ? 
+                                                new Date(order.createdAt || order.CreatedAt).toLocaleDateString() + ' ' + 
+                                                new Date(order.createdAt || order.CreatedAt).toLocaleTimeString() : 
+                                                'N/A'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="fw-bold text-muted">Last Updated:</label>
+                                        <div class="text-break">
+                                            ${order.updatedAt || order.UpdatedAt ? 
+                                                new Date(order.updatedAt || order.UpdatedAt).toLocaleDateString() + ' ' + 
+                                                new Date(order.updatedAt || order.UpdatedAt).toLocaleTimeString() : 
+                                                'N/A'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        modalBody.html(modalContent);
+    }
+
+    function exportToCSV() {
+        // Implement CSV export
+        showAlert('CSV export coming soon!', 'info');
+    }
+
+    function refreshData() {
+        loadOrders();
+        loadProfitStats();
+        updateLastUpdated();
+        showAlert('Data refreshed successfully!', 'success');
+    }
+
+    function toggleAutoRefresh() {
+        const autoRefreshBtn = $('#autoRefreshBtn');
+        const refreshInterval = autoRefreshBtn.data('interval');
+
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+            autoRefreshBtn.text('Start Auto Refresh');
+            autoRefreshBtn.removeClass('btn-danger').addClass('btn-success');
+            autoRefreshBtn.find('i').removeClass('fa-pause').addClass('fa-play');
+            console.log('Auto-refresh stopped.');
+        } else {
+            autoRefreshInterval = setInterval(refreshData, 30000); // Refresh every 30 seconds
+            autoRefreshBtn.text('Stop Auto Refresh');
+            autoRefreshBtn.removeClass('btn-success').addClass('btn-danger');
+            autoRefreshBtn.find('i').removeClass('fa-play').addClass('fa-pause');
+            console.log('Auto-refresh started.');
+        }
+        autoRefreshBtn.data('interval', autoRefreshInterval);
+    }
+
+    function previousPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            loadOrders();
+        }
+    }
+
+    function nextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadOrders();
+        }
+    }
+
+    function showAlert(message, type) {
+        const alertDiv = $(`
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `);
+        $('.container-fluid').prepend(alertDiv);
+        
+        setTimeout(() => {
+            alertDiv.alert('close');
+        }, 5000);
+    }
+
+    function updatePayoutStatus(orderId, newStatus) {
+        console.log('Updating payout status for order:', orderId, 'to:', newStatus);
+        
+        fetch(`/api/v1/profit/status/${orderId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ payoutStatus: newStatus })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                // Update the UI immediately
+                const row = $(`tr:has(button[onclick*="${orderId}"])`);
+                if (row.length > 0) {
+                    row.find('span.payout-status').text(newStatus).removeClass('processing paid refunded').addClass(newStatus);
+                    row.find('select').val(newStatus);
+                }
+                showAlert('Payout status updated successfully!', 'success');
+                
+                // Refresh data to update stats and charts
+                setTimeout(() => {
+                    loadOrders();
+                    loadProfitStats();
+                }, 500);
+            } else {
+                showAlert('Error updating payout status: ' + result.error, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating payout status:', error);
+            showAlert('Error updating payout status: ' + error.message, 'danger');
+        });
+    }
+
+    // Test function to manually test charts
+    function testCharts() {
+        console.log('=== CHART TEST START ===');
+        console.log('payoutStatusChart exists:', !!payoutStatusChart);
+        
+        // Test payout chart
+        if (payoutStatusChart) {
+            console.log('Payout chart data before update:', JSON.stringify(payoutStatusChart.data));
+            payoutStatusChart.data.datasets[0].data = [8, 5, 3];
+            payoutStatusChart.update('none'); // Use 'none' mode for faster updates
+            console.log('Payout chart test update completed');
+        } else {
+            console.error('❌ Payout chart is null/undefined');
+        }
+        
+        // Check if Chart.js is available
+        console.log('Chart.js available:', typeof Chart !== 'undefined');
+        if (typeof Chart !== 'undefined') {
+            console.log('Chart.js version:', Chart.version);
+        }
+        
+        // Check canvas elements
+        const payoutCanvas = document.getElementById('payoutStatusChart');
+        console.log('Payout canvas exists:', !!payoutCanvas);
+        
+        if (payoutCanvas) {
+            console.log('Payout canvas dimensions:', payoutCanvas.width, 'x', payoutCanvas.height);
+        }
+        
+        console.log('=== CHART TEST END ===');
+    }
+    
+    // Add test button to page
+    $(document).ready(function() {
+        // Add test button after the refresh button
+        $('#autoRefreshBtn').after(`
+            <button type="button" class="btn btn-sm btn-outline-warning" onclick="testCharts()">
+                <i class="fas fa-bug me-1"></i>Test Charts
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="initializeCharts()">
+                <i class="fas fa-chart-line me-1"></i>Reinit Charts
+            </button>
+        `);
+    });
+</script>

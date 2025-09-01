@@ -4,73 +4,211 @@
     ViewData["Title"] = "Dashboard";
 }
 
-<div class="row">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                            Total Sites
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalSites</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="bi bi-globe fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- Bootstrap CSS and JS CDN -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Total Orders
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalOrders</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="bi bi-cart fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-info shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                            Total Revenue
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">$@Model.TotalRevenue.ToString("N2")</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="bi bi-currency-dollar fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- Font Awesome for better icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                            Active Partners
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.ActivePartners</div>
+<style>
+    /* Modern Dashboard Styles */
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .metric-card {
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--card-color) 0%, var(--card-color-light) 100%);
+    }
+    
+    .metric-card.primary { --card-color: #4e73df; --card-color-light: #6f86e5; }
+    .metric-card.success { --card-color: #1cc88a; --card-color-light: #36e9a8; }
+    .metric-card.info { --card-color: #36b9cc; --card-color-light: #5cd6e8; }
+    .metric-card.warning { --card-color: #f6c23e; --card-color-light: #f8d675; }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        background: linear-gradient(135deg, var(--card-color) 0%, var(--card-color-light) 100%);
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        margin: 0;
+    }
+    
+    .chart-card {
+        background: white;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .chart-card .card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 15px 15px 0 0;
+        padding: 1.25rem;
+    }
+    
+    .chart-card .card-header h6 {
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .quick-actions .btn {
+        border-radius: 12px;
+        padding: 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .quick-actions .btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .quick-actions .btn i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .table-modern {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .table-modern th {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: none;
+        font-weight: 600;
+        color: #495057;
+        padding: 1rem;
+    }
+    
+    .table-modern td {
+        padding: 1rem;
+        border: none;
+        border-bottom: 1px solid #f1f3f4;
+    }
+    
+    .table-modern tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .trend-indicator {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    
+    .trend-up { color: #1cc88a; }
+    .trend-down { color: #e74a3b; }
+    
+    @@media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+        }
+        
+        .dashboard-header {
+            padding: 1.5rem 0;
+        }
+    }
+</style>
+
+<!-- Enhanced Dashboard Header -->
+<div class="dashboard-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-tachometer-alt me-3"></i>Dashboard Overview
+                </h1>
+                <p class="mb-0 opacity-75">Welcome back! Here's what's happening with your business today.</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="d-flex align-items-center justify-content-end">
+                    <div class="me-3">
+                        <small class="d-block opacity-75">Last Updated</small>
+                        <strong>@DateTime.Now.ToString("MMM dd, yyyy HH:mm")</strong>
                     </div>
-                    <div class="col-auto">
-                        <i class="bi bi-people fa-2x text-gray-300"></i>
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                        <i class="fas fa-clock fa-lg"></i>
                     </div>
                 </div>
             </div>
@@ -78,129 +216,843 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-lg-6">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary">Recent Orders</h6>
-                <a href="/admin/ordersv2" class="btn btn-sm btn-outline-primary">View All</a>
+<!-- Enhanced Metric Cards -->
+<div class="container-fluid">
+    <div class="stats-grid">
+        <div class="metric-card primary">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="metric-label">Total Sites</p>
+                        <h3 class="metric-value">@Model.TotalSites</h3>
+                        <div class="trend-indicator trend-up">
+                            <i class="fas fa-arrow-up me-1"></i>Active
+                        </div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                @if (Model.RecentOrders.Any())
-                {
-                    <div class="table-responsive">
-                        <table class="table table-bordered" width="100%" cellspacing="0">
-                            <thead>
-                                <tr>
-                                    <th>Order ID</th>
-                                    <th>Site</th>
-                                    <th>Customer</th>
-                                    <th>Total</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var order in Model.RecentOrders)
-                                {
+        </div>
+
+        <div class="metric-card success">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="metric-label">Total Orders</p>
+                        <h3 class="metric-value">@Model.TotalOrders.ToString("N0")</h3>
+                        <div class="trend-indicator trend-up">
+                            <i class="fas fa-arrow-up me-1"></i>@Model.RecentOrders.Count Recent
+                        </div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card info">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="metric-label">Total Revenue</p>
+                        <h3 class="metric-value">$@Model.TotalRevenue.ToString("N2")</h3>
+                        <div class="trend-indicator trend-up">
+                            <i class="fas fa-arrow-up me-1"></i>All Time
+                        </div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card warning">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="metric-label">Active Partners</p>
+                        <h3 class="metric-value">@Model.ActivePartners</h3>
+                        <div class="trend-indicator trend-up">
+                            <i class="fas fa-arrow-up me-1"></i>Collaborating
+                        </div>
+                    </div>
+                    <div class="metric-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="chart-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6><i class="fas fa-chart-line me-2"></i>Revenue & Orders Trend</h6>
+                    <div class="d-flex gap-2">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-primary active" onclick="updateChartPeriod('7d')">7D</button>
+                            <button type="button" class="btn btn-outline-primary" onclick="updateChartPeriod('30d')">30D</button>
+                            <button type="button" class="btn btn-outline-primary" onclick="updateChartPeriod('90d')">90D</button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-warning" onclick="testDashboardAPIs()">
+                            <i class="fas fa-bug me-1"></i>Test APIs
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="chart-card">
+                <div class="card-header">
+                    <h6><i class="fas fa-chart-pie me-2"></i>Order Status Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Site Performance Chart -->
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6><i class="fas fa-chart-bar me-2"></i>Site Performance Comparison</h6>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshSiteChart()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <canvas id="siteChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Data Tables Row -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6><i class="fas fa-list me-2"></i>Recent Orders</h6>
+                    <a href="/admin/ordersv2" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-external-link-alt me-1"></i>View All
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.RecentOrders.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-modern mb-0">
+                                <thead>
                                     <tr>
-                                        <td>@order.WcOrderId</td>
-                                        <td>@order.SiteName</td>
-                                        <td>@order.CustomerName</td>
-                                        <td>$@order.OrderTotal.ToString("N2")</td>
-                                        <td>
-                                            <span class="badge bg-@(order.Status == "completed" ? "success" : "warning")">
-                                                @order.Status
-                                            </span>
-                                        </td>
+                                        <th>Order ID</th>
+                                        <th>Site</th>
+                                        <th>Customer</th>
+                                        <th>Total</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
                                     </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-                else
-                {
-                    <p class="text-muted">No orders found.</p>
-                }
+                                </thead>
+                                <tbody>
+                                    @foreach (var order in Model.RecentOrders)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>#@order.WcOrderId</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">@order.SiteName</span>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <strong>@order.CustomerName</strong>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold text-success">$@order.OrderTotal.ToString("N2")</span>
+                                            </td>
+                                            <td>
+                                                @{
+                                                    var statusClass = order.Status switch
+                                                    {
+                                                        "completed" => "success",
+                                                        "processing" => "warning",
+                                                        "shipped" => "info",
+                                                        _ => "secondary"
+                                                    };
+                                                }
+                                                <span class="status-badge bg-@statusClass">
+                                                    @order.Status
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">@order.PlacedAt.ToString("MMM dd")</small>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No orders found.</p>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="col-lg-6">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary">Site Overview</h6>
-                <a href="/admin/sites" class="btn btn-sm btn-outline-primary">Manage Sites</a>
-            </div>
-            <div class="card-body">
-                @if (Model.SiteStats.Any())
-                {
-                    <div class="table-responsive">
-                        <table class="table table-bordered" width="100%" cellspacing="0">
-                            <thead>
-                                <tr>
-                                    <th>Site</th>
-                                    <th>Orders</th>
-                                    <th>Revenue</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var stat in Model.SiteStats)
-                                {
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6><i class="fas fa-chart-area me-2"></i>Site Overview</h6>
+                    <a href="/admin/sites" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-cog me-1"></i>Manage Sites
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.SiteStats.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-modern mb-0">
+                                <thead>
                                     <tr>
-                                        <td>@stat.SiteName</td>
-                                        <td>@stat.OrderCount</td>
-                                        <td>$@stat.TotalRevenue.ToString("N2")</td>
+                                        <th>Site</th>
+                                        <th>Orders</th>
+                                        <th>Revenue</th>
+                                        <th>Performance</th>
                                     </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-                else
-                {
-                    <p class="text-muted">No site statistics available.</p>
-                }
+                                </thead>
+                                <tbody>
+                                    @foreach (var stat in Model.SiteStats)
+                                    {
+                                        var performanceClass = stat.OrderCount > 10 ? "success" : stat.OrderCount > 5 ? "warning" : "danger";
+                                        var performanceText = stat.OrderCount > 10 ? "Excellent" : stat.OrderCount > 5 ? "Good" : "Low";
+                                        
+                                        <tr>
+                                            <td>
+                                                <strong>@stat.SiteName</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">@stat.OrderCount</span>
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold text-success">$@stat.TotalRevenue.ToString("N2")</span>
+                                            </td>
+                                            <td>
+                                                <span class="status-badge bg-@performanceClass">
+                                                    @performanceText
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-globe fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No site statistics available.</p>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Quick Actions -->
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <a href="/admin/sites" class="btn btn-primary btn-lg w-100">
-                            <i class="bi bi-globe fa-2x d-block mb-2"></i>
-                            Manage Sites
-                        </a>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <a href="/admin/orders" class="btn btn-success btn-lg w-100">
-                            <i class="bi bi-cart fa-2x d-block mb-2"></i>
-                            View Orders
-                        </a>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <a href="/admin/reports" class="btn btn-info btn-lg w-100">
-                            <i class="bi bi-graph-up fa-2x d-block mb-2"></i>
-                            Reports
-                        </a>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <a href="/admin/partners" class="btn btn-warning btn-lg w-100">
-                            <i class="bi bi-people fa-2x d-block mb-2"></i>
-                            Partners
-                        </a>
+    <!-- Enhanced Quick Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-card">
+                <div class="card-header">
+                    <h6><i class="fas fa-bolt me-2"></i>Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row quick-actions">
+                        <div class="col-md-3 mb-3">
+                            <a href="/admin/sites" class="btn btn-primary w-100">
+                                <i class="fas fa-globe"></i>
+                                <div>Manage Sites</div>
+                                <small class="opacity-75">Configure & monitor</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="/admin/orders" class="btn btn-success w-100">
+                                <i class="fas fa-shopping-cart"></i>
+                                <div>View Orders</div>
+                                <small class="opacity-75">Track & manage</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="/admin/gatewaypartnerrevenue" class="btn btn-info w-100">
+                                <i class="fas fa-chart-line"></i>
+                                <div>Revenue Reports</div>
+                                <small class="opacity-75">Analytics & insights</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="/admin/partners" class="btn btn-warning w-100">
+                                <i class="fas fa-handshake"></i>
+                                <div>Partners</div>
+                                <small class="opacity-75">Manage relationships</small>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // Initialize charts when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadDashboardData();
+    });
+
+    function loadDashboardData() {
+        console.log('Loading dashboard data...');
+        
+        // Load all dashboard data
+        Promise.all([
+            fetch('/api/v1/dashboard/revenue-trend?period=6m'),
+            fetch('/api/v1/dashboard/order-status-distribution'),
+            fetch('/api/v1/dashboard/site-performance')
+        ])
+        .then(responses => {
+            console.log('API responses received:', responses);
+            return Promise.all(responses.map(r => r.json()));
+        })
+        .then(([revenueData, statusData, siteData]) => {
+            console.log('Revenue data:', revenueData);
+            console.log('Status data:', statusData);
+            console.log('Site data:', siteData);
+            
+            if (revenueData.success && revenueData.data && revenueData.data.length > 0) {
+                console.log('Initializing revenue chart with data:', revenueData.data);
+                initializeRevenueChart(revenueData.data);
+            } else {
+                console.warn('Revenue data not available or empty:', revenueData);
+                initializeEmptyRevenueChart();
+            }
+            
+            if (statusData.success && statusData.data && statusData.data.length > 0) {
+                console.log('Initializing status chart with data:', statusData.data);
+                initializeStatusChart(statusData.data);
+            } else {
+                console.warn('Status data not available or empty:', statusData);
+                initializeEmptyStatusChart();
+            }
+            
+            if (siteData.success && siteData.data && siteData.data.length > 0) {
+                console.log('Initializing site chart with data:', siteData.data);
+                initializeSiteChart(siteData.data);
+            } else {
+                console.warn('Site data not available or empty:', siteData);
+                initializeEmptySiteChart();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading dashboard data:', error);
+            // Fallback to basic charts if API fails
+            initializeBasicCharts();
+        });
+    }
+
+    function initializeRevenueChart(data) {
+        const revenueCtx = document.getElementById('revenueChart');
+        if (!revenueCtx) return;
+
+        const labels = data.map(d => d.month);
+        const revenueValues = data.map(d => d.revenue);
+        const orderValues = data.map(d => d.orders);
+
+        new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Revenue',
+                    data: revenueValues,
+                    borderColor: '#4e73df',
+                    backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Orders',
+                    data: orderValues,
+                    borderColor: '#1cc88a',
+                    backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Revenue ($)'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Orders'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                }
+            }
+        });
+    }
+
+    function initializeStatusChart(data) {
+        const statusCtx = document.getElementById('statusChart');
+        if (!statusCtx) return;
+
+        const labels = data.map(d => d.status);
+        const values = data.map(d => d.count);
+
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#1cc88a', '#f6c23e', '#36b9cc', '#6c757d', '#e74a3b', '#fd7e14'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    function initializeSiteChart(data) {
+        const siteCtx = document.getElementById('siteChart');
+        if (!siteCtx) return;
+
+        const labels = data.map(d => d.siteName);
+        const orderValues = data.map(d => d.orderCount);
+        const revenueValues = data.map(d => d.totalRevenue);
+
+        new Chart(siteCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Orders',
+                    data: orderValues,
+                    backgroundColor: 'rgba(78, 115, 223, 0.8)',
+                    borderColor: '#4e73df',
+                    borderWidth: 1
+                }, {
+                    label: 'Revenue ($)',
+                    data: revenueValues,
+                    backgroundColor: 'rgba(28, 200, 138, 0.8)',
+                    borderColor: '#1cc88a',
+                    borderWidth: 1,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Orders'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Revenue ($)'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                }
+            }
+        });
+    }
+
+    function initializeBasicCharts() {
+        // Fallback charts with basic data if API fails
+        console.log('Using fallback charts due to API failure');
+        
+        const revenueCtx = document.getElementById('revenueChart');
+        if (revenueCtx) {
+            new Chart(revenueCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Revenue',
+                        data: [0, 0, 0, 0, 0, 0],
+                        borderColor: '#4e73df',
+                        backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Orders',
+                        data: [0, 0, 0, 0, 0, 0],
+                        borderColor: '#1cc88a',
+                        backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Revenue ($)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Orders'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+        }
+
+        const statusCtx = document.getElementById('statusChart');
+        if (statusCtx) {
+            new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['No Data'],
+                    datasets: [{
+                        data: [1],
+                        backgroundColor: ['#6c757d'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function initializeEmptyRevenueChart() {
+        console.log('Initializing empty revenue chart');
+        const revenueCtx = document.getElementById('revenueChart');
+        if (!revenueCtx) return;
+
+        new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: ['No Data Available'],
+                datasets: [{
+                    label: 'Revenue',
+                    data: [0],
+                    borderColor: '#4e73df',
+                    backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Orders',
+                    data: [0],
+                    borderColor: '#1cc88a',
+                    backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Revenue ($)'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Orders'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                }
+            }
+        });
+    }
+
+    function initializeEmptyStatusChart() {
+        console.log('Initializing empty status chart');
+        const statusCtx = document.getElementById('statusChart');
+        if (!statusCtx) return;
+
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['No Data'],
+                datasets: [{
+                    data: [1],
+                    backgroundColor: ['#6c757d'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    function initializeEmptySiteChart() {
+        console.log('Initializing empty site chart');
+        const siteCtx = document.getElementById('siteChart');
+        if (!siteCtx) return;
+
+        new Chart(siteCtx, {
+            type: 'bar',
+            data: {
+                labels: ['No Sites'],
+                datasets: [{
+                    label: 'Orders',
+                    data: [0],
+                    backgroundColor: 'rgba(78, 115, 223, 0.8)',
+                    borderColor: '#4e73df',
+                    borderWidth: 1
+                }, {
+                    label: 'Revenue ($)',
+                    data: [0],
+                    backgroundColor: 'rgba(28, 200, 138, 0.8)',
+                    borderColor: '#1cc88a',
+                    borderWidth: 1,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Orders'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Revenue ($)'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                }
+            }
+        });
+    }
+
+    function updateChartPeriod(period) {
+        // Update chart buttons
+        document.querySelectorAll('.btn-group .btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        // Reload revenue chart with new period
+        fetch(`/api/v1/dashboard/revenue-trend?period=${period}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove existing chart and recreate
+                    const revenueCtx = document.getElementById('revenueChart');
+                    if (revenueCtx) {
+                        revenueCtx.getContext('2d').clearRect(0, 0, revenueCtx.width, revenueCtx.height);
+                        initializeRevenueChart(data.data);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error updating chart period:', error);
+            });
+    }
+
+    function refreshSiteChart() {
+        // Refresh the site performance chart
+        location.reload();
+    }
+
+    function testDashboardAPIs() {
+        console.log('Testing Dashboard APIs...');
+        const testResults = document.getElementById('testResults');
+        if (!testResults) {
+            const newTestResults = document.createElement('div');
+            newTestResults.id = 'testResults';
+            newTestResults.style.margin = '10px 0';
+            newTestResults.style.padding = '10px';
+            newTestResults.style.border = '1px solid #ccc';
+            newTestResults.style.borderRadius = '5px';
+            newTestResults.style.backgroundColor = '#f9f9f9';
+            document.body.appendChild(newTestResults);
+        }
+
+        const testResultsDiv = document.getElementById('testResults');
+        testResultsDiv.innerHTML = '<h5>API Test Results:</h5><ul>';
+
+        // Test Revenue Trend
+        fetch('/api/v1/dashboard/revenue-trend?period=6m')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    testResultsDiv.innerHTML += '<li><strong>Revenue Trend API:</strong> Success - Data loaded.</li>';
+                    initializeRevenueChart(data.data); // Re-initialize with test data
+                } else {
+                    testResultsDiv.innerHTML += '<li><strong>Revenue Trend API:</strong> Failed - ' + data.message + '</li>';
+                    initializeEmptyRevenueChart(); // Show empty chart on failure
+                }
+            })
+            .catch(error => {
+                testResultsDiv.innerHTML += '<li><strong>Revenue Trend API:</strong> Error - ' + error.message + '</li>';
+                initializeEmptyRevenueChart(); // Show empty chart on error
+            });
+
+        // Test Status Distribution
+        fetch('/api/v1/dashboard/order-status-distribution')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    testResultsDiv.innerHTML += '<li><strong>Status Distribution API:</strong> Success - Data loaded.</li>';
+                    initializeStatusChart(data.data); // Re-initialize with test data
+                } else {
+                    testResultsDiv.innerHTML += '<li><strong>Status Distribution API:</strong> Failed - ' + data.message + '</li>';
+                    initializeEmptyStatusChart(); // Show empty chart on failure
+                }
+            })
+            .catch(error => {
+                testResultsDiv.innerHTML += '<li><strong>Status Distribution API:</strong> Error - ' + error.message + '</li>';
+                initializeEmptyStatusChart(); // Show empty chart on error
+            });
+
+        // Test Site Performance
+        fetch('/api/v1/dashboard/site-performance')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    testResultsDiv.innerHTML += '<li><strong>Site Performance API:</strong> Success - Data loaded.</li>';
+                    initializeSiteChart(data.data); // Re-initialize with test data
+                } else {
+                    testResultsDiv.innerHTML += '<li><strong>Site Performance API:</strong> Failed - ' + data.message + '</li>';
+                    initializeEmptySiteChart(); // Show empty chart on failure
+                }
+            })
+            .catch(error => {
+                testResultsDiv.innerHTML += '<li><strong>Site Performance API:</strong> Error - ' + error.message + '</li>';
+                initializeEmptySiteChart(); // Show empty chart on error
+            });
+
+        testResultsDiv.innerHTML += '</ul>';
+    }
+</script>

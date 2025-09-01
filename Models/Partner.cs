@@ -8,6 +8,7 @@ namespace HubApi.Models;
 public class Partner
 {
     [Key]
+    [Column("id")]
     public Guid Id { get; set; } = Guid.NewGuid();
 
     [Required]

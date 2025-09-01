@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🚚 Test Shipment API Endpoints</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 3px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>🚚 Test Shipment API Endpoints</h1>
+    
+    <div class="test-section">
+        <h3>1. Test Pending Orders API</h3>
+        <p>This should return orders that need shipping</p>
+        <button onclick="testPendingOrders()">Test /api/v1/shipments/pending-orders</button>
+        <div id="pendingOrdersResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Test Shipments API</h3>
+        <p>This should return all shipments (empty for now)</p>
+        <button onclick="testShipments()">Test /api/v1/shipments</button>
+        <div id="shipmentsResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Test Shipment Statistics API</h3>
+        <p>This should return shipment counts</p>
+        <button onclick="testStatistics()">Test /api/v1/shipments/statistics</button>
+        <div id="statisticsResult" class="result"></div>
+    </div>
+
+    <script>
+        async function testPendingOrders() {
+            const resultDiv = document.getElementById('pendingOrdersResult');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch('/api/v1/shipments/pending-orders');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ Success!</h4>
+                        <p><strong>Response Status:</strong> ${response.status}</p>
+                        <p><strong>Success:</strong> ${data.success}</p>
+                        <p><strong>Total Orders:</strong> ${data.total || 'N/A'}</p>
+                        <p><strong>Data:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h4>❌ Error!</h4>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Response:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h4>❌ Network Error!</h4>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+        }
+        
+        async function testShipments() {
+            const resultDiv = document.getElementById('shipmentsResult');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch('/api/v1/shipments');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ Success!</h4>
+                        <p><strong>Response Status:</strong> ${response.status}</p>
+                        <p><strong>Success:</strong> ${data.success}</p>
+                        <p><strong>Total Shipments:</strong> ${data.total || 'N/A'}</p>
+                        <p><strong>Data:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h4>❌ Error!</h4>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Response:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h4>❌ Network Error!</h4>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+        }
+        
+        async function testStatistics() {
+            const resultDiv = document.getElementById('statisticsResult');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch('/api/v1/shipments/statistics');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ Success!</h4>
+                        <p><strong>Response Status:</strong> ${response.status}</p>
+                        <p><strong>Success:</strong> ${data.success}</p>
+                        <p><strong>Data:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h4>❌ Error!</h4>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Response:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `>
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h4>❌ Network Error!</h4>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
+
+
